@@ -1,4 +1,4 @@
-"""API websocket utilisée par la carte Lovelace."""
+"""WebSocket API used by the Lovelace card."""
 
 from __future__ import annotations
 
@@ -41,6 +41,7 @@ def ws_entries(hass: HomeAssistant, connection: websocket_api.ActiveConnection, 
         vol.Optional("entry_id"): str,
         vol.Optional("days", default=60): vol.All(int, vol.Range(min=1, max=3660)),
         vol.Optional("events", default=20): vol.All(int, vol.Range(min=0, max=500)),
+        vol.Optional("language"): str,
     }
 )
 @callback
@@ -49,7 +50,7 @@ def ws_data(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg
     entry_id = msg.get("entry_id") or next(iter(managers), None)
     manager = managers.get(entry_id) if entry_id else None
     if manager is None:
-        connection.send_error(msg["id"], "not_found", "Aucun poulailler configuré")
+        connection.send_error(msg["id"], "not_found", "No chicken coop configured")
         return
 
     def url(relative: str | None, stamp: str | None = None) -> str | None:
@@ -96,7 +97,7 @@ def ws_data(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg
             "stats": manager.stats(),
             "history": history,
             "events": events,
-            "journal": data["journal"][-15:],
+            "journal": manager.journal(msg.get("language"), 15),
             "last_reading": last,
             "last_image_url": url(LAST_IMAGE, last.get("time")) if last else None,
             "camera": manager.camera_entity,

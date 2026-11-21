@@ -1,4 +1,4 @@
-"""Comptage Œufs Poulailler : compte les œufs pondus grâce à une caméra et à l'IA de Home Assistant."""
+"""Comptage Œufs Poulailler (Chicken Coop Egg Counter): counts laid eggs with a camera and Home Assistant AI."""
 
 from __future__ import annotations
 
@@ -65,10 +65,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         all_managers: dict[str, PoulaillerManager] = hass.data[DOMAIN]
         if entry_id := call.data.get(ATTR_ENTRY_ID):
             if entry_id not in all_managers:
-                raise ServiceValidationError(f"Poulailler {entry_id} introuvable")
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="entry_not_found",
+                    translation_placeholders={"entry_id": entry_id},
+                )
             return [all_managers[entry_id]]
         if not all_managers:
-            raise ServiceValidationError("Aucun poulailler configuré")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="no_entry"
+            )
         return list(all_managers.values())
 
     async def count_now(call: ServiceCall) -> None:
@@ -89,7 +95,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         result = {}
         for manager in managers(call):
             result[manager.entry.entry_id] = await manager.async_import(call.data[ATTR_ENTITY_ID])
-        return {"jours_importes": result}
+        return {"imported_days": result}
 
     hass.services.async_register(DOMAIN, SERVICE_COUNT_NOW, count_now, vol.Schema(_ENTRY))
     hass.services.async_register(

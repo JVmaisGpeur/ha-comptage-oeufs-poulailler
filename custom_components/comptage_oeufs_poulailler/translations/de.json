@@ -1,0 +1,187 @@
+{
+  "title": "Hühnerstall-Eierzähler",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hühnerstall-Eierzähler",
+        "description": "Eine Kamera filmt die Legenester; die KI von Home Assistant (KI-Aufgabe) zählt die Eier.",
+        "data": {
+          "name": "Name des Hühnerstalls",
+          "camera": "Kamera der Legenester",
+          "ai_task_entity": "Zu verwendende KI (leer = Standard-KI-Aufgabe)",
+          "nests": "Anzahl der Legenester",
+          "notify_entity": "Benachrichtigung bei jedem neuen Ei",
+          "import_entity": "Verlauf importieren aus (altes Format TT/MM/JJ:n)"
+        },
+        "data_description": {
+          "import_entity": "Optional: übernimmt einen vorhandenen Verlauf aus einem input_text-Helfer."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Diese Kamera wird bereits von einem Hühnerstall verwendet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Optionen des Hühnerstalls",
+        "data": {
+          "camera": "Kamera der Legenester",
+          "ai_task_entity": "Zu verwendende KI (leer = Standard-KI-Aufgabe)",
+          "nests": "Anzahl der Legenester",
+          "notify_entity": "Benachrichtigungs-Entität",
+          "notify_service": "Oder Benachrichtigungsaktion (z. B. notify.mobile_app_handy)",
+          "prompt": "Anweisung an die KI",
+          "sensitivity": "Bildänderungsschwelle vor dem Aufruf der KI",
+          "snapshot_days": "Aufbewahrungsdauer der Fotos"
+        },
+        "data_description": {
+          "prompt": "{pondoirs} wird durch die Anzahl der Legenester ersetzt. Behalte den Standardtext, damit er der Sprache von Home Assistant folgt.",
+          "sensitivity": "Haben sich seit der letzten Analyse weniger Pixel als dieser Prozentsatz geändert, wird die KI nicht erneut aufgerufen (0 = KI immer aufrufen)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "oeufs_aujourd_hui": {
+        "name": "Eier heute",
+        "unit_of_measurement": "Eier"
+      },
+      "oeufs_hier": {
+        "name": "Eier gestern",
+        "unit_of_measurement": "Eier"
+      },
+      "oeufs_7_jours": {
+        "name": "Eier letzte 7 Tage",
+        "unit_of_measurement": "Eier"
+      },
+      "oeufs_ce_mois": {
+        "name": "Eier diesen Monat",
+        "unit_of_measurement": "Eier"
+      },
+      "oeufs_cette_annee": {
+        "name": "Eier dieses Jahr",
+        "unit_of_measurement": "Eier"
+      },
+      "oeufs_total": {
+        "name": "Eier insgesamt",
+        "unit_of_measurement": "Eier"
+      },
+      "oeufs_dans_les_pondoirs": {
+        "name": "Eier in den Legenestern",
+        "unit_of_measurement": "Eier"
+      },
+      "etat_du_comptage": {
+        "name": "Zählstatus"
+      }
+    },
+    "button": {
+      "compter_maintenant": {
+        "name": "Jetzt zählen"
+      },
+      "oeufs_ramasses": {
+        "name": "Eier eingesammelt"
+      }
+    },
+    "switch": {
+      "comptage_automatique": {
+        "name": "Automatische Zählung"
+      }
+    },
+    "number": {
+      "intervalle_de_comptage": {
+        "name": "Zählintervall"
+      },
+      "delai_de_confirmation": {
+        "name": "Bestätigungsverzögerung"
+      }
+    },
+    "time": {
+      "heure_de_debut": {
+        "name": "Startzeit"
+      },
+      "heure_de_fin": {
+        "name": "Endzeit"
+      }
+    },
+    "image": {
+      "dernier_oeuf_detecte": {
+        "name": "Zuletzt erkanntes Ei"
+      }
+    }
+  },
+  "services": {
+    "compter_maintenant": {
+      "name": "Jetzt zählen",
+      "description": "Startet sofort eine Kamera- und KI-Messung.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Hühnerstall",
+          "description": "Leer = alle Hühnerställe."
+        }
+      }
+    },
+    "corriger": {
+      "name": "Einen Tag korrigieren",
+      "description": "Legt die Anzahl der an einem Tag gelegten Eier fest (heute eingeschlossen).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Hühnerstall",
+          "description": "Leer = alle Hühnerställe."
+        },
+        "date": {
+          "name": "Datum",
+          "description": "Zu korrigierender Tag."
+        },
+        "nombre": {
+          "name": "Anzahl der Eier",
+          "description": "Tatsächliche Anzahl der an diesem Tag gelegten Eier."
+        }
+      }
+    },
+    "oeufs_ramasses": {
+      "name": "Eier eingesammelt",
+      "description": "Meldet dem Zähler, dass die Eier eingesammelt wurden, damit die nächsten nicht verpasst werden.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Hühnerstall",
+          "description": "Leer = alle Hühnerställe."
+        },
+        "restants": {
+          "name": "Zurückgelassene Eier",
+          "description": "In den Nestern gelassene Eier (z. B. ein Gipsei)."
+        }
+      }
+    },
+    "importer_historique": {
+      "name": "Verlauf importieren",
+      "description": "Importiert einen Verlauf im Format TT/MM/JJ:n;… aus einem input_text (bekannte Tage bleiben erhalten).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Hühnerstall",
+          "description": "Leer = alle Hühnerställe."
+        },
+        "entity_id": {
+          "name": "Entität",
+          "description": "input_text mit dem Verlauf."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "future_date": {
+      "message": "Das Datum {date} liegt in der Zukunft."
+    },
+    "entity_not_found": {
+      "message": "Entität {entity_id} nicht gefunden."
+    },
+    "entry_not_found": {
+      "message": "Hühnerstall {entry_id} nicht gefunden."
+    },
+    "no_entry": {
+      "message": "Es ist kein Hühnerstall eingerichtet."
+    }
+  }
+}

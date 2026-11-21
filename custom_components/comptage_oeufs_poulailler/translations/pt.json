@@ -1,0 +1,187 @@
+{
+  "title": "Contador de ovos do galinheiro",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Contador de ovos do galinheiro",
+        "description": "Uma câmara filma os ninhos; a IA do Home Assistant (tarefa de IA) conta os ovos.",
+        "data": {
+          "name": "Nome do galinheiro",
+          "camera": "Câmara dos ninhos",
+          "ai_task_entity": "IA a usar (vazio = tarefa de IA predefinida)",
+          "nests": "Número de ninhos",
+          "notify_entity": "Notificação a cada ovo novo",
+          "import_entity": "Importar histórico de (formato antigo dd/mm/aa:n)"
+        },
+        "data_description": {
+          "import_entity": "Opcional: importa um histórico existente guardado num input_text."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Esta câmara já é usada por um galinheiro."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opções do galinheiro",
+        "data": {
+          "camera": "Câmara dos ninhos",
+          "ai_task_entity": "IA a usar (vazio = tarefa de IA predefinida)",
+          "nests": "Número de ninhos",
+          "notify_entity": "Entidade de notificação",
+          "notify_service": "Ou ação de notificação (ex. notify.mobile_app_telemovel)",
+          "prompt": "Instruções para a IA",
+          "sensitivity": "Limiar de alteração da imagem antes de chamar a IA",
+          "snapshot_days": "Conservação das fotos"
+        },
+        "data_description": {
+          "prompt": "{pondoirs} é substituído pelo número de ninhos. Deixe o texto predefinido para seguir o idioma do Home Assistant.",
+          "sensitivity": "Se mudou menos do que esta percentagem de píxeis desde a última análise, a IA não é chamada de novo (0 = chamar sempre a IA)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "oeufs_aujourd_hui": {
+        "name": "Ovos hoje",
+        "unit_of_measurement": "ovos"
+      },
+      "oeufs_hier": {
+        "name": "Ovos ontem",
+        "unit_of_measurement": "ovos"
+      },
+      "oeufs_7_jours": {
+        "name": "Ovos últimos 7 dias",
+        "unit_of_measurement": "ovos"
+      },
+      "oeufs_ce_mois": {
+        "name": "Ovos este mês",
+        "unit_of_measurement": "ovos"
+      },
+      "oeufs_cette_annee": {
+        "name": "Ovos este ano",
+        "unit_of_measurement": "ovos"
+      },
+      "oeufs_total": {
+        "name": "Ovos no total",
+        "unit_of_measurement": "ovos"
+      },
+      "oeufs_dans_les_pondoirs": {
+        "name": "Ovos nos ninhos",
+        "unit_of_measurement": "ovos"
+      },
+      "etat_du_comptage": {
+        "name": "Estado da contagem"
+      }
+    },
+    "button": {
+      "compter_maintenant": {
+        "name": "Contar agora"
+      },
+      "oeufs_ramasses": {
+        "name": "Ovos recolhidos"
+      }
+    },
+    "switch": {
+      "comptage_automatique": {
+        "name": "Contagem automática"
+      }
+    },
+    "number": {
+      "intervalle_de_comptage": {
+        "name": "Intervalo de contagem"
+      },
+      "delai_de_confirmation": {
+        "name": "Atraso de confirmação"
+      }
+    },
+    "time": {
+      "heure_de_debut": {
+        "name": "Hora de início"
+      },
+      "heure_de_fin": {
+        "name": "Hora de fim"
+      }
+    },
+    "image": {
+      "dernier_oeuf_detecte": {
+        "name": "Último ovo detetado"
+      }
+    }
+  },
+  "services": {
+    "compter_maintenant": {
+      "name": "Contar agora",
+      "description": "Inicia já uma leitura de câmara + IA.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Galinheiro",
+          "description": "Vazio = todos os galinheiros."
+        }
+      }
+    },
+    "corriger": {
+      "name": "Corrigir um dia",
+      "description": "Define o número de ovos postos num dado dia (hoje incluído).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Galinheiro",
+          "description": "Vazio = todos os galinheiros."
+        },
+        "date": {
+          "name": "Data",
+          "description": "Dia a corrigir."
+        },
+        "nombre": {
+          "name": "Número de ovos",
+          "description": "Número real de ovos postos nesse dia."
+        }
+      }
+    },
+    "oeufs_ramasses": {
+      "name": "Ovos recolhidos",
+      "description": "Indica que os ovos foram recolhidos, para não perder os seguintes.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Galinheiro",
+          "description": "Vazio = todos os galinheiros."
+        },
+        "restants": {
+          "name": "Ovos deixados",
+          "description": "Ovos deixados nos ninhos (ex. um ovo falso)."
+        }
+      }
+    },
+    "importer_historique": {
+      "name": "Importar histórico",
+      "description": "Importa um histórico dd/mm/aa:n;… de um input_text (os dias já conhecidos são mantidos).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Galinheiro",
+          "description": "Vazio = todos os galinheiros."
+        },
+        "entity_id": {
+          "name": "Entidade",
+          "description": "input_text que contém o histórico."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "future_date": {
+      "message": "A data {date} está no futuro."
+    },
+    "entity_not_found": {
+      "message": "Entidade {entity_id} não encontrada."
+    },
+    "entry_not_found": {
+      "message": "Galinheiro {entry_id} não encontrado."
+    },
+    "no_entry": {
+      "message": "Nenhum galinheiro configurado."
+    }
+  }
+}

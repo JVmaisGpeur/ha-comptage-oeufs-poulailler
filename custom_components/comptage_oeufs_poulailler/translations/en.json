@@ -1,9 +1,10 @@
 {
+  "title": "Chicken Coop Egg Counter",
   "config": {
     "step": {
       "user": {
         "title": "Chicken Coop Egg Counter",
-        "description": "A camera films the nesting boxes; Home Assistant's AI (ai_task) counts the eggs.",
+        "description": "A camera films the nesting boxes; Home Assistant's AI (AI Task) counts the eggs.",
         "data": {
           "name": "Coop name",
           "camera": "Nesting box camera",
@@ -13,7 +14,7 @@
           "import_entity": "Import history from (old dd/mm/yy:n format)"
         },
         "data_description": {
-          "import_entity": "Optional: imports history from an existing input_text."
+          "import_entity": "Optional: imports an existing history stored in an input_text helper."
         }
       }
     },
@@ -36,7 +37,7 @@
           "snapshot_days": "Photo retention"
         },
         "data_description": {
-          "prompt": "{pondoirs} is replaced by the number of nesting boxes.",
+          "prompt": "{pondoirs} is replaced by the number of nesting boxes. Leave the default text to follow Home Assistant's language.",
           "sensitivity": "If fewer pixels than this percentage changed since the last analysis, the AI is not called again (0 = always call the AI)."
         }
       }
@@ -45,25 +46,32 @@
   "entity": {
     "sensor": {
       "oeufs_aujourd_hui": {
-        "name": "Eggs today"
+        "name": "Eggs today",
+        "unit_of_measurement": "eggs"
       },
       "oeufs_hier": {
-        "name": "Eggs yesterday"
+        "name": "Eggs yesterday",
+        "unit_of_measurement": "eggs"
       },
       "oeufs_7_jours": {
-        "name": "Eggs last 7 days"
+        "name": "Eggs last 7 days",
+        "unit_of_measurement": "eggs"
       },
       "oeufs_ce_mois": {
-        "name": "Eggs this month"
+        "name": "Eggs this month",
+        "unit_of_measurement": "eggs"
       },
       "oeufs_cette_annee": {
-        "name": "Eggs this year"
+        "name": "Eggs this year",
+        "unit_of_measurement": "eggs"
       },
       "oeufs_total": {
-        "name": "Eggs total"
+        "name": "Eggs total",
+        "unit_of_measurement": "eggs"
       },
       "oeufs_dans_les_pondoirs": {
-        "name": "Eggs in nesting boxes"
+        "name": "Eggs in nesting boxes",
+        "unit_of_measurement": "eggs"
       },
       "etat_du_comptage": {
         "name": "Counting status"
@@ -135,7 +143,7 @@
     },
     "oeufs_ramasses": {
       "name": "Eggs collected",
-      "description": "Tells the counter eggs were collected so the next ones are not missed.",
+      "description": "Tells the counter the eggs were collected, so the next ones are not missed.",
       "fields": {
         "config_entry_id": {
           "name": "Coop",
@@ -149,7 +157,7 @@
     },
     "importer_historique": {
       "name": "Import history",
-      "description": "Imports a dd/mm/yy:n;… history from an input_text (known days are kept).",
+      "description": "Imports a dd/mm/yy:n;… history from an input_text (days already known are kept).",
       "fields": {
         "config_entry_id": {
           "name": "Coop",
@@ -160,6 +168,20 @@
           "description": "input_text holding the history."
         }
       }
+    }
+  },
+  "exceptions": {
+    "future_date": {
+      "message": "The date {date} is in the future."
+    },
+    "entity_not_found": {
+      "message": "Entity {entity_id} not found."
+    },
+    "entry_not_found": {
+      "message": "Coop {entry_id} not found."
+    },
+    "no_entry": {
+      "message": "No chicken coop is configured."
     }
   }
 }

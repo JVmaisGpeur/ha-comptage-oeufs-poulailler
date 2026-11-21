@@ -1,4 +1,4 @@
-"""Entité de base partagée par toutes les plateformes."""
+"""Base entity shared by all platforms."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
-from homeassistant.util import slugify
 
 from .const import DOMAIN, VERSION
 from .manager import PoulaillerManager
@@ -24,8 +23,6 @@ class PoulaillerEntity(Entity):
         entry = manager.entry
         self._attr_unique_id = f"{entry.entry_id}_{key}"
         self._attr_translation_key = key
-        # Identifiant stable et lisible, quelle que soit la langue de HA
-        self.entity_id = f"{self.platform_domain}.{slugify(entry.title)}_{key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=entry.title,

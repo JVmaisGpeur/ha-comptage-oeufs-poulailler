@@ -1,4 +1,4 @@
-"""Cœur de l'intégration : planification, lectures caméra + IA, historique et photos."""
+"""Core of the integration: scheduling, camera + AI readings, history and photos."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.event import async_call_later, async_track_time_change
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
@@ -34,19 +34,20 @@ from .const import (
     DEFAULT_END,
     DEFAULT_INTERVAL,
     DEFAULT_NESTS,
-    DEFAULT_PROMPT,
     DEFAULT_SENSITIVITY,
     DEFAULT_SNAPSHOT_DAYS,
     DEFAULT_START,
     DOMAIN,
     EVENT_NEW_EGG,
+    FINAL_RETRY_DELAY,
     FORCE_AI_AFTER,
     MAX_EVENTS,
     MAX_JOURNAL,
     MEDIA_FOLDER,
-    RETRY_DELAY,
+    RETRY_DELAYS,
     STORAGE_VERSION,
 )
+from .i18n import render_line, text
 from .logic import build_prompt, changed_fraction, parse_legacy_history, stats, thumbnail
 
 _LOGGER = logging.getLogger(__name__)
@@ -54,6 +55,26 @@ _LOGGER = logging.getLogger(__name__)
 LAST_IMAGE = "derniere_lecture.jpg"
 TEMP_IMAGE = "lecture_en_cours.jpg"
 EVENTS_DIR = "evenements"
+
+
+def _reading(number: int) -> dict[str, Any]:
+    """Translated « Reading N » label, resolved when the line is displayed."""
+    return {"key": "reading", "params": {"r": number}}
+
+
+def _reason(err: Exception) -> dict[str, Any] | str:
+    """Short, translated reason for an AI failure."""
+    message = str(err)
+    if isinstance(err, TimeoutError):
+        return {"key": "reason_timeout"}
+    if isinstance(err, (KeyError, TypeError, ValueError)):
+        return {"key": "reason_invalid"}
+    if "503" in message or "overloaded" in message.lower() or "high demand" in message.lower():
+        return {"key": "reason_overloaded"}
+    if "429" in message or "quota" in message.lower() or "RESOURCE_EXHAUSTED" in message:
+        return {"key": "reason_quota"}
+    first_line = message.strip().splitlines()[0] if message.strip() else type(err).__name__
+    return first_line[:80]
 
 
 @dataclass
@@ -108,6 +129,10 @@ class PoulaillerManager:
     @property
     def options(self) -> dict[str, Any]:
         return {**self.entry.data, **self.entry.options}
+
+    @property
+    def language(self) -> str:
+        return self.hass.config.language
 
     @property
     def name(self) -> str:
@@ -182,13 +207,19 @@ class PoulaillerManager:
         self._save()
         async_dispatcher_send(self.hass, self.signal)
 
-    def _log(self, message: str, *, cycle: bool = False) -> None:
-        line = f"{dt_util.now().strftime('%H:%M:%S')} {'▶ ' if cycle else ''}{message}"
-        _LOGGER.debug("[%s] %s", self.name, line)
+    def _log(self, key: str, *, cycle: bool = False, **params: Any) -> None:
+        """Journal line stored as key + parameters, translated when displayed."""
+        line = {"t": dt_util.now().strftime("%H:%M:%S"), "k": key, "p": params, "c": cycle}
+        _LOGGER.debug("[%s] %s", self.name, render_line("en", line))
         journal = self.data["journal"]
         journal.append(line)
         del journal[:-MAX_JOURNAL]
         self._updated()
+
+    def journal(self, language: str | None = None, count: int = 20) -> list[str]:
+        """Last journal lines in the requested language (HA language by default)."""
+        lang = language or self.language
+        return [render_line(lang, line) for line in self.data["journal"][-count:]]
 
     def _today(self) -> date:
         return dt_util.now().date()
@@ -248,62 +279,71 @@ class PoulaillerManager:
     # ------------------------------------------------------------------ comptage
     async def async_count(self, source: str = "manual") -> None:
         if self._lock.locked():
-            self._log("Un comptage est déjà en cours : demande ignorée")
+            self._log("already_running")
             return
+        success = True
         async with self._lock:
             self.counting = True
             self._updated()
             try:
-                await self._run_cycle(source)
+                success = await self._run_cycle(source)
             except Exception as err:  # noqa: BLE001
-                _LOGGER.exception("Erreur pendant le comptage")
-                self._log(f"Erreur inattendue : {err}")
+                _LOGGER.exception("Error while counting")
+                self._log("unexpected_error", error=str(err)[:120])
             finally:
                 self.counting = False
                 self._updated()
+        if not success and source == "final":
+            # Do not let the last eggs of the day slip to tomorrow
+            self._log("final_retry", min=FINAL_RETRY_DELAY)
+            self._unsubs.append(
+                async_call_later(self.hass, FINAL_RETRY_DELAY * 60, self._final_retry)
+            )
 
-    async def _run_cycle(self, source: str) -> None:
+    @callback
+    def _final_retry(self, _now: datetime) -> None:
+        self.entry.async_create_background_task(
+            self.hass, self.async_count("retry"), f"{DOMAIN}_comptage"
+        )
+
+    async def _run_cycle(self, source: str) -> bool:
+        """One counting cycle. Returns False when no reading could be made."""
         self._ensure_today()
-        label = {"auto": "automatique", "final": "final", "manual": "manuel"}.get(source, source)
-        self._log(f"Début du comptage ({label})", cycle=True)
+        self._log("cycle_start", cycle=True, source={"key": f"source_{source}"})
 
-        r1 = await self._reading("Lecture 1", force=source != "auto")
+        r1 = await self._reading(1, force=source != "auto")
         if r1 is None:
-            self._log("Lecture 1 en échec : rien de validé")
-            return
+            self._log("reading_failed", reading=_reading(1))
+            return False
 
         base = self.data["baseline"]
         if base is None:
             self.data["baseline"] = r1.eggs
-            self._log(
-                f"Initialisation : {r1.eggs} œuf(s) déjà dans les pondoirs, "
-                "ils ne sont pas comptés comme pondus aujourd'hui"
-            )
-            return
+            self._log("init", n=r1.eggs)
+            return True
 
         n1 = r1.eggs
         if n1 == base:
-            self._log(f"Lecture 1 : {n1} œuf(s), comme avant : rien de nouveau")
-            return
+            self._log("same", reading=_reading(1), n=n1)
+            return True
         if n1 < base and r1.hen:
-            self._log(f"Lecture 1 : {n1} œuf(s) mais une poule est sur un nid : on garde {base}")
-            return
+            self._log("hen_keep", reading=_reading(1), n=n1, base=base)
+            return True
 
         rising = n1 > base
-        reason = "" if rising else " (ramassage ?)"
         self._log(
-            f"Lecture 1 : {n1} œuf(s) pour {base} connu(s){reason} : "
-            f"confirmation dans {self.delay} min"
+            "rise_wait" if rising else "drop_wait",
+            reading=_reading(1), n=n1, base=base, delay=self.delay,
         )
         await asyncio.sleep(self.delay * 60)
         if source != "manual" and not self.data["auto"]:
-            self._log("Comptage automatique mis en pause pendant l'attente : abandon")
-            return
+            self._log("paused_abort")
+            return True
 
-        r2 = await self._reading("Lecture 2", force=True)
+        r2 = await self._reading(2, force=True)
         if r2 is None:
-            self._log("Lecture 2 en échec : rien de validé")
-            return
+            self._log("reading_failed", reading=_reading(2))
+            return True
         base2 = self.data["baseline"] if self.data["baseline"] is not None else base
         n2 = r2.eggs
 
@@ -319,54 +359,55 @@ class PoulaillerManager:
                     "image": images[-1] if images else None,
                 }
                 self._log(
-                    f"Lecture 2 : {n2} œuf(s) : confirmé, +{new} → "
-                    f"{self.data['today']} œuf(s) aujourd'hui"
+                    "confirmed", reading=_reading(2), n=n2, new=new, today=self.data["today"]
                 )
                 await self._notify_new(new)
             else:
                 await self._save_event("rejete", r1, r2, base2, base2)
-                self._log(f"Lecture 2 : {n2} œuf(s) : non confirmé, rien de validé")
+                self._log("not_confirmed", reading=_reading(2), n=n2)
         elif n2 < base2 and not r2.hen:
             remaining = max(n1, n2)
             self.data["baseline"] = remaining
             await self._save_event("ramassage", r1, r2, base2, remaining)
-            self._log(f"Ramassage confirmé : {remaining} œuf(s) restent dans les pondoirs")
+            self._log("collect_confirmed", n=remaining)
         else:
-            self._log(f"Lecture 2 : {n2} œuf(s) : baisse non confirmée, on garde {base2}")
+            self._log("drop_not_confirmed", reading=_reading(2), n=n2, base=base2)
+        return True
 
-    async def _reading(self, label: str, *, force: bool) -> Reading | None:
-        """Photo + IA, avec un nouvel essai en cas d'échec."""
-        for attempt in (1, 2):
-            retry = attempt == 1
+    async def _reading(self, number: int, *, force: bool) -> Reading | None:
+        """Photo + AI, retried with increasing delays (AI services saturate briefly)."""
+        label = _reading(number)
+        attempts = len(RETRY_DELAYS) + 1
+        for attempt in range(attempts):
+            wait = RETRY_DELAYS[attempt] if attempt < len(RETRY_DELAYS) else None
             try:
                 image = await camera.async_get_image(
                     self.hass, self.camera_entity, timeout=CAMERA_TIMEOUT
                 )
                 content = image.content
             except HomeAssistantError as err:
-                self._log(f"{label} : caméra indisponible ({err})")
-                if retry:
-                    await asyncio.sleep(RETRY_DELAY)
-                    continue
-                return None
+                self._log("camera_unavailable", reading=label, error=str(err)[:80])
+                if wait is None:
+                    return None
+                await asyncio.sleep(wait)
+                continue
 
             thumb = await self.hass.async_add_executor_job(thumbnail, content)
             reused = self._reuse_last(thumb, force)
             if reused is not None:
                 self._log(
-                    f"{label} : image inchangée ({reused[1]:.1%} de pixels modifiés), "
-                    f"IA non sollicitée : {reused[0].eggs} œuf(s)"
+                    "unchanged", reading=label, pct=float(reused[1]), n=reused[0].eggs
                 )
                 return reused[0]
 
             result = await self._ask_ai(content)
-            if result is None:
-                if retry:
-                    self._log(f"{label} : l'IA n'a pas répondu, nouvel essai dans {RETRY_DELAY} s")
-                    await asyncio.sleep(RETRY_DELAY)
-                    continue
-                self._log(f"{label} : l'IA n'a pas répondu")
-                return None
+            if not isinstance(result, tuple):
+                if wait is None:
+                    self._log("ai_failed", reading=label, reason=result)
+                    return None
+                self._log("ai_retry", reading=label, reason=result, s=wait)
+                await asyncio.sleep(wait)
+                continue
 
             eggs, hen = result
             self._ref_thumb = thumb
@@ -377,12 +418,12 @@ class PoulaillerManager:
             }
             await self._write(LAST_IMAGE, content)
             if hen:
-                self._log(f"{label} : {eggs} œuf(s) vu(s), poule présente sur un nid")
+                self._log("hen_seen", reading=label, n=eggs)
             return Reading(eggs, hen, content)
         return None
 
     def _reuse_last(self, thumb: bytes | None, force: bool) -> tuple[Reading, float] | None:
-        """Retourne la dernière lecture si l'image n'a pas changé (économie d'appels IA)."""
+        """Last reading again if the image has not changed (saves AI calls)."""
         sensitivity = float(self.options.get(CONF_SENSITIVITY, DEFAULT_SENSITIVITY)) / 100
         last = self.data.get("last_reading")
         if force or sensitivity <= 0 or thumb is None or self._ref_thumb is None or not last:
@@ -395,23 +436,29 @@ class PoulaillerManager:
             return None
         return Reading(int(last["eggs"]), bool(last["hen"]), None, reused=True), fraction
 
-    async def _ask_ai(self, content: bytes) -> tuple[int, bool] | None:
+    def prompt(self) -> str:
+        nests = int(self.options.get(CONF_NESTS, DEFAULT_NESTS))
+        template = self.options.get(CONF_PROMPT) or text(self.language, "prompt")
+        return build_prompt(template, nests)
+
+    async def _ask_ai(self, content: bytes) -> tuple[int, bool] | dict[str, Any] | str:
+        """(eggs, hen) on success, otherwise the reason of the failure."""
         if self._media_uri and await self._write(TEMP_IMAGE, content):
             media_id = f"{self._media_uri}/{TEMP_IMAGE}"
         else:
             media_id = f"media-source://camera/{self.camera_entity}"
-        nests = int(self.options.get(CONF_NESTS, DEFAULT_NESTS))
+        lang = self.language
         data: dict[str, Any] = {
-            "task_name": f"Comptage des œufs – {self.name}",
-            "instructions": build_prompt(self.options.get(CONF_PROMPT) or DEFAULT_PROMPT, nests),
+            "task_name": text(lang, "task_name", name=self.name),
+            "instructions": self.prompt(),
             "structure": {
-                "oeufs": {
-                    "description": "Nombre total d'œufs visibles dans tous les pondoirs",
+                "eggs": {
+                    "description": text(lang, "field_eggs"),
                     "required": True,
                     "selector": {"number": {"min": 0, "max": 60, "mode": "box"}},
                 },
-                "poule_presente": {
-                    "description": "Une poule est-elle dans un pondoir ou cache-t-elle une partie d'un nid ?",
+                "hen_present": {
+                    "description": text(lang, "field_hen"),
                     "required": True,
                     "selector": {"boolean": {}},
                 },
@@ -426,13 +473,13 @@ class PoulaillerManager:
                     "ai_task", "generate_data", data, blocking=True, return_response=True
                 )
             result = (response or {}).get("data") or {}
-            eggs = int(float(result["oeufs"]))
-            hen = bool(result.get("poule_presente", False))
+            eggs = int(float(result["eggs"]))
+            hen = bool(result.get("hen_present", False))
         except (HomeAssistantError, TimeoutError, KeyError, TypeError, ValueError) as err:
-            _LOGGER.warning("[%s] lecture IA en échec : %s", self.name, err)
-            return None
+            _LOGGER.warning("[%s] AI reading failed: %s", self.name, err)
+            return _reason(err)
         if eggs < 0:
-            return None
+            return {"key": "reason_invalid"}
         return eggs, hen
 
     async def _write(self, relative: str, content: bytes) -> bool:
@@ -479,11 +526,11 @@ class PoulaillerManager:
 
     async def _notify_new(self, new: int) -> None:
         today = self.data["today"]
-        what = "nouvel œuf" if new == 1 else f"{new} nouveaux œufs"
-        message = f"🥚 {self.name} : {what} ! Total aujourd'hui : {today}"
+        key = "notify_one" if new == 1 else "notify_many"
+        message = text(self.language, key, name=self.name, new=new, today=today)
         self.hass.bus.async_fire(
             EVENT_NEW_EGG,
-            {"config_entry_id": self.entry.entry_id, "nouveaux": new, "total": today},
+            {"config_entry_id": self.entry.entry_id, "new": new, "total": today},
         )
         calls: list[tuple[str, str, dict[str, Any]]] = []
         if entity := self.options.get(CONF_NOTIFY_ENTITY):
@@ -495,40 +542,48 @@ class PoulaillerManager:
             try:
                 await self.hass.services.async_call(domain, name, data, blocking=True)
             except (HomeAssistantError, ValueError) as err:
-                self._log(f"Notification {domain}.{name} en échec : {err}")
+                self._log("notify_failed", service=f"{domain}.{name}", error=str(err)[:80])
 
     # ------------------------------------------------------------------ actions
     async def async_correct(self, day: date, count: int) -> None:
         self._ensure_today()
         today = self._today()
         if day > today:
-            raise ServiceValidationError(f"La date {day:%d/%m/%Y} est dans le futur")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="future_date",
+                translation_placeholders={"date": day.isoformat()},
+            )
         if day == today:
             self._set_today(count)
         else:
             self.data["history"][day.isoformat()] = max(0, int(count))
-        self._log(f"Correction : {day:%d/%m/%y} = {count} œuf(s)")
+        self._log("corrected", date=day.isoformat(), n=count)
 
     @callback
     def async_collected(self, remaining: int = 0) -> None:
         self.data["baseline"] = max(0, int(remaining))
-        self._log(f"Œufs ramassés : {remaining} œuf(s) laissé(s) dans les pondoirs")
+        self._log("collected", n=remaining)
 
     async def async_import(self, entity_id: str) -> int:
         state = self.hass.states.get(entity_id)
         if state is None:
-            raise ServiceValidationError(f"Entité {entity_id} introuvable")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="entity_not_found",
+                translation_placeholders={"entity_id": entity_id},
+            )
         imported = parse_legacy_history(state.state)
         history = self.data["history"]
         today = self._today().isoformat()
         added = 0
         for day, count in imported.items():
             if day == today or (day in history and history[day] != 0):
-                continue  # on n'écrase ni aujourd'hui ni une valeur déjà connue
+                continue  # never overwrite today or a value already known
             history[day] = count
             added += 1
         self.data["imported"] = True
-        self._log(f"Historique importé depuis {entity_id} : {added} jour(s)")
+        self._log("imported", entity=entity_id, n=added)
         return added
 
     @callback
@@ -538,7 +593,7 @@ class PoulaillerManager:
         self.data[key] = value
         self._updated()
 
-    # ------------------------------------------------------------------ lecture
+    # ------------------------------------------------------------------ read
     def stats(self) -> dict[str, int]:
         return stats(self.data["history"], self._today())
 

@@ -1,9 +1,10 @@
 {
+  "title": "Comptage Œufs Poulailler",
   "config": {
     "step": {
       "user": {
         "title": "Comptage Œufs Poulailler",
-        "description": "Une caméra filme les pondoirs ; l'IA de Home Assistant (ai_task) compte les œufs.",
+        "description": "Une caméra filme les pondoirs ; l'IA de Home Assistant (tâche d'IA) compte les œufs.",
         "data": {
           "name": "Nom du poulailler",
           "camera": "Caméra des pondoirs",
@@ -13,7 +14,7 @@
           "import_entity": "Importer l'historique depuis (ancien format jj/mm/aa:n)"
         },
         "data_description": {
-          "import_entity": "Optionnel : reprend l'historique de l'ancien tableau de bord."
+          "import_entity": "Optionnel : reprend un historique existant stocké dans un input_text."
         }
       }
     },
@@ -30,13 +31,13 @@
           "ai_task_entity": "IA à utiliser (vide = IA par défaut)",
           "nests": "Nombre de pondoirs",
           "notify_entity": "Entité de notification",
-          "notify_service": "Ou service de notification (ex. notify.mobile_app_telephone)",
+          "notify_service": "Ou action de notification (ex. notify.mobile_app_telephone)",
           "prompt": "Consigne donnée à l'IA",
           "sensitivity": "Seuil de changement d'image avant d'appeler l'IA",
           "snapshot_days": "Durée de conservation des photos"
         },
         "data_description": {
-          "prompt": "{pondoirs} est remplacé par le nombre de pondoirs.",
+          "prompt": "{pondoirs} est remplacé par le nombre de pondoirs. Laissez le texte par défaut pour suivre la langue de Home Assistant.",
           "sensitivity": "Si moins de ce pourcentage de pixels a changé depuis la dernière analyse, l'IA n'est pas rappelée (0 = toujours appeler l'IA)."
         }
       }
@@ -45,25 +46,32 @@
   "entity": {
     "sensor": {
       "oeufs_aujourd_hui": {
-        "name": "Œufs aujourd'hui"
+        "name": "Œufs aujourd'hui",
+        "unit_of_measurement": "œufs"
       },
       "oeufs_hier": {
-        "name": "Œufs hier"
+        "name": "Œufs hier",
+        "unit_of_measurement": "œufs"
       },
       "oeufs_7_jours": {
-        "name": "Œufs sur 7 jours"
+        "name": "Œufs sur 7 jours",
+        "unit_of_measurement": "œufs"
       },
       "oeufs_ce_mois": {
-        "name": "Œufs ce mois"
+        "name": "Œufs ce mois",
+        "unit_of_measurement": "œufs"
       },
       "oeufs_cette_annee": {
-        "name": "Œufs cette année"
+        "name": "Œufs cette année",
+        "unit_of_measurement": "œufs"
       },
       "oeufs_total": {
-        "name": "Œufs au total"
+        "name": "Œufs au total",
+        "unit_of_measurement": "œufs"
       },
       "oeufs_dans_les_pondoirs": {
-        "name": "Œufs dans les pondoirs"
+        "name": "Œufs dans les pondoirs",
+        "unit_of_measurement": "œufs"
       },
       "etat_du_comptage": {
         "name": "État du comptage"
@@ -149,7 +157,7 @@
     },
     "importer_historique": {
       "name": "Importer un historique",
-      "description": "Importe un historique au format jj/mm/aa:n;… depuis un input_text (n'écrase pas les jours déjà connus).",
+      "description": "Importe un historique au format jj/mm/aa:n;… depuis un input_text (les jours déjà connus sont conservés).",
       "fields": {
         "config_entry_id": {
           "name": "Poulailler",
@@ -160,6 +168,20 @@
           "description": "input_text contenant l'historique."
         }
       }
+    }
+  },
+  "exceptions": {
+    "future_date": {
+      "message": "La date {date} est dans le futur."
+    },
+    "entity_not_found": {
+      "message": "Entité {entity_id} introuvable."
+    },
+    "entry_not_found": {
+      "message": "Poulailler {entry_id} introuvable."
+    },
+    "no_entry": {
+      "message": "Aucun poulailler n'est configuré."
     }
   }
 }

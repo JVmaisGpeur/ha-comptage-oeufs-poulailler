@@ -1,0 +1,187 @@
+{
+  "title": "Contador de huevos del gallinero",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Contador de huevos del gallinero",
+        "description": "Una cámara graba los nidos; la IA de Home Assistant (tarea de IA) cuenta los huevos.",
+        "data": {
+          "name": "Nombre del gallinero",
+          "camera": "Cámara de los nidos",
+          "ai_task_entity": "IA a usar (vacío = tarea de IA predeterminada)",
+          "nests": "Número de nidos",
+          "notify_entity": "Notificación con cada huevo nuevo",
+          "import_entity": "Importar historial desde (formato antiguo dd/mm/aa:n)"
+        },
+        "data_description": {
+          "import_entity": "Opcional: importa un historial existente guardado en un input_text."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Esta cámara ya la usa un gallinero."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones del gallinero",
+        "data": {
+          "camera": "Cámara de los nidos",
+          "ai_task_entity": "IA a usar (vacío = tarea de IA predeterminada)",
+          "nests": "Número de nidos",
+          "notify_entity": "Entidad de notificación",
+          "notify_service": "O acción de notificación (p. ej. notify.mobile_app_telefono)",
+          "prompt": "Instrucciones para la IA",
+          "sensitivity": "Umbral de cambio de imagen antes de llamar a la IA",
+          "snapshot_days": "Conservación de las fotos"
+        },
+        "data_description": {
+          "prompt": "{pondoirs} se sustituye por el número de nidos. Deja el texto predeterminado para que siga el idioma de Home Assistant.",
+          "sensitivity": "Si ha cambiado menos de este porcentaje de píxeles desde el último análisis, no se vuelve a llamar a la IA (0 = llamar siempre a la IA)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "oeufs_aujourd_hui": {
+        "name": "Huevos hoy",
+        "unit_of_measurement": "huevos"
+      },
+      "oeufs_hier": {
+        "name": "Huevos ayer",
+        "unit_of_measurement": "huevos"
+      },
+      "oeufs_7_jours": {
+        "name": "Huevos últimos 7 días",
+        "unit_of_measurement": "huevos"
+      },
+      "oeufs_ce_mois": {
+        "name": "Huevos este mes",
+        "unit_of_measurement": "huevos"
+      },
+      "oeufs_cette_annee": {
+        "name": "Huevos este año",
+        "unit_of_measurement": "huevos"
+      },
+      "oeufs_total": {
+        "name": "Huevos en total",
+        "unit_of_measurement": "huevos"
+      },
+      "oeufs_dans_les_pondoirs": {
+        "name": "Huevos en los nidos",
+        "unit_of_measurement": "huevos"
+      },
+      "etat_du_comptage": {
+        "name": "Estado del recuento"
+      }
+    },
+    "button": {
+      "compter_maintenant": {
+        "name": "Contar ahora"
+      },
+      "oeufs_ramasses": {
+        "name": "Huevos recogidos"
+      }
+    },
+    "switch": {
+      "comptage_automatique": {
+        "name": "Recuento automático"
+      }
+    },
+    "number": {
+      "intervalle_de_comptage": {
+        "name": "Intervalo de recuento"
+      },
+      "delai_de_confirmation": {
+        "name": "Retraso de confirmación"
+      }
+    },
+    "time": {
+      "heure_de_debut": {
+        "name": "Hora de inicio"
+      },
+      "heure_de_fin": {
+        "name": "Hora de fin"
+      }
+    },
+    "image": {
+      "dernier_oeuf_detecte": {
+        "name": "Último huevo detectado"
+      }
+    }
+  },
+  "services": {
+    "compter_maintenant": {
+      "name": "Contar ahora",
+      "description": "Lanza ahora una lectura de cámara + IA.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gallinero",
+          "description": "Vacío = todos los gallineros."
+        }
+      }
+    },
+    "corriger": {
+      "name": "Corregir un día",
+      "description": "Fija el número de huevos puestos un día dado (hoy incluido).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gallinero",
+          "description": "Vacío = todos los gallineros."
+        },
+        "date": {
+          "name": "Fecha",
+          "description": "Día a corregir."
+        },
+        "nombre": {
+          "name": "Número de huevos",
+          "description": "Número real de huevos puestos ese día."
+        }
+      }
+    },
+    "oeufs_ramasses": {
+      "name": "Huevos recogidos",
+      "description": "Indica que se recogieron los huevos para no perder los siguientes.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gallinero",
+          "description": "Vacío = todos los gallineros."
+        },
+        "restants": {
+          "name": "Huevos dejados",
+          "description": "Huevos dejados en los nidos (p. ej. un huevo falso)."
+        }
+      }
+    },
+    "importer_historique": {
+      "name": "Importar historial",
+      "description": "Importa un historial dd/mm/aa:n;… desde un input_text (se conservan los días ya conocidos).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gallinero",
+          "description": "Vacío = todos los gallineros."
+        },
+        "entity_id": {
+          "name": "Entidad",
+          "description": "input_text que contiene el historial."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "future_date": {
+      "message": "La fecha {date} está en el futuro."
+    },
+    "entity_not_found": {
+      "message": "Entidad {entity_id} no encontrada."
+    },
+    "entry_not_found": {
+      "message": "Gallinero {entry_id} no encontrado."
+    },
+    "no_entry": {
+      "message": "No hay ningún gallinero configurado."
+    }
+  }
+}

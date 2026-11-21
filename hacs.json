@@ -1,6 +1,5 @@
 {
-  "name": "Comptage Œufs Poulailler",
+  "name": "Comptage Œufs Poulailler – Chicken Coop Egg Counter",
   "homeassistant": "2025.8.0",
-  "render_readme": true,
-  "country": ["FR"]
+  "render_readme": true
 }

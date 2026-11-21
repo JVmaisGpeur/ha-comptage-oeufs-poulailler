@@ -1,0 +1,187 @@
+{
+  "title": "Contatore di uova del pollaio",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Contatore di uova del pollaio",
+        "description": "Una telecamera riprende i nidi; l'IA di Home Assistant (attività IA) conta le uova.",
+        "data": {
+          "name": "Nome del pollaio",
+          "camera": "Telecamera dei nidi",
+          "ai_task_entity": "IA da usare (vuoto = attività IA predefinita)",
+          "nests": "Numero di nidi",
+          "notify_entity": "Notifica a ogni nuovo uovo",
+          "import_entity": "Importa cronologia da (vecchio formato gg/mm/aa:n)"
+        },
+        "data_description": {
+          "import_entity": "Facoltativo: importa una cronologia esistente salvata in un input_text."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Questa telecamera è già usata da un pollaio."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni del pollaio",
+        "data": {
+          "camera": "Telecamera dei nidi",
+          "ai_task_entity": "IA da usare (vuoto = attività IA predefinita)",
+          "nests": "Numero di nidi",
+          "notify_entity": "Entità di notifica",
+          "notify_service": "Oppure azione di notifica (es. notify.mobile_app_telefono)",
+          "prompt": "Istruzioni per l'IA",
+          "sensitivity": "Soglia di variazione dell'immagine prima di chiamare l'IA",
+          "snapshot_days": "Conservazione delle foto"
+        },
+        "data_description": {
+          "prompt": "{pondoirs} viene sostituito dal numero di nidi. Lascia il testo predefinito per seguire la lingua di Home Assistant.",
+          "sensitivity": "Se è cambiata una percentuale di pixel inferiore a questa dall'ultima analisi, l'IA non viene richiamata (0 = chiamare sempre l'IA)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "oeufs_aujourd_hui": {
+        "name": "Uova oggi",
+        "unit_of_measurement": "uova"
+      },
+      "oeufs_hier": {
+        "name": "Uova ieri",
+        "unit_of_measurement": "uova"
+      },
+      "oeufs_7_jours": {
+        "name": "Uova ultimi 7 giorni",
+        "unit_of_measurement": "uova"
+      },
+      "oeufs_ce_mois": {
+        "name": "Uova questo mese",
+        "unit_of_measurement": "uova"
+      },
+      "oeufs_cette_annee": {
+        "name": "Uova quest'anno",
+        "unit_of_measurement": "uova"
+      },
+      "oeufs_total": {
+        "name": "Uova in totale",
+        "unit_of_measurement": "uova"
+      },
+      "oeufs_dans_les_pondoirs": {
+        "name": "Uova nei nidi",
+        "unit_of_measurement": "uova"
+      },
+      "etat_du_comptage": {
+        "name": "Stato del conteggio"
+      }
+    },
+    "button": {
+      "compter_maintenant": {
+        "name": "Conta ora"
+      },
+      "oeufs_ramasses": {
+        "name": "Uova raccolte"
+      }
+    },
+    "switch": {
+      "comptage_automatique": {
+        "name": "Conteggio automatico"
+      }
+    },
+    "number": {
+      "intervalle_de_comptage": {
+        "name": "Intervallo di conteggio"
+      },
+      "delai_de_confirmation": {
+        "name": "Ritardo di conferma"
+      }
+    },
+    "time": {
+      "heure_de_debut": {
+        "name": "Ora di inizio"
+      },
+      "heure_de_fin": {
+        "name": "Ora di fine"
+      }
+    },
+    "image": {
+      "dernier_oeuf_detecte": {
+        "name": "Ultimo uovo rilevato"
+      }
+    }
+  },
+  "services": {
+    "compter_maintenant": {
+      "name": "Conta ora",
+      "description": "Avvia subito una lettura telecamera + IA.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pollaio",
+          "description": "Vuoto = tutti i pollai."
+        }
+      }
+    },
+    "corriger": {
+      "name": "Correggi un giorno",
+      "description": "Imposta il numero di uova deposte in un dato giorno (oggi compreso).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pollaio",
+          "description": "Vuoto = tutti i pollai."
+        },
+        "date": {
+          "name": "Data",
+          "description": "Giorno da correggere."
+        },
+        "nombre": {
+          "name": "Numero di uova",
+          "description": "Numero reale di uova deposte quel giorno."
+        }
+      }
+    },
+    "oeufs_ramasses": {
+      "name": "Uova raccolte",
+      "description": "Indica che le uova sono state raccolte, per non perdere le successive.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pollaio",
+          "description": "Vuoto = tutti i pollai."
+        },
+        "restants": {
+          "name": "Uova lasciate",
+          "description": "Uova lasciate nei nidi (es. un uovo finto)."
+        }
+      }
+    },
+    "importer_historique": {
+      "name": "Importa cronologia",
+      "description": "Importa una cronologia gg/mm/aa:n;… da un input_text (i giorni già noti vengono mantenuti).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pollaio",
+          "description": "Vuoto = tutti i pollai."
+        },
+        "entity_id": {
+          "name": "Entità",
+          "description": "input_text contenente la cronologia."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "future_date": {
+      "message": "La data {date} è nel futuro."
+    },
+    "entity_not_found": {
+      "message": "Entità {entity_id} non trovata."
+    },
+    "entry_not_found": {
+      "message": "Pollaio {entry_id} non trovato."
+    },
+    "no_entry": {
+      "message": "Nessun pollaio configurato."
+    }
+  }
+}

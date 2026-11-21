@@ -1,104 +1,121 @@
-# 🥚 Comptage Œufs Poulailler
+# 🥚 Comptage Œufs Poulailler – Chicken Coop Egg Counter
 
-Intégration Home Assistant qui **compte les œufs pondus chaque jour** grâce à une caméra qui filme les pondoirs et à l'IA de Home Assistant (`ai_task` : Google Gemini, OpenAI, Ollama…).
+🇬🇧 English · [🇫🇷 Français](README.fr.md)
 
-![Carte Lovelace](docs/carte.png)
+Home Assistant integration that **counts the eggs laid every day** using a camera pointed at the nesting boxes and Home Assistant's AI (`ai_task`: Google Gemini, OpenAI, Ollama…).
 
-## Fonctionnalités
+🌍 Available in **English, Français, Deutsch, Español, Italiano, Nederlands and Português**: setup screens, entities, journal, notifications, AI instructions and card all follow your Home Assistant language.
 
-- 📷 **Comptage automatique** toutes les N minutes entre une heure de début et une heure de fin réglables, plus un dernier comptage pile à l'heure de fin.
-- ✅ **Double lecture** : un nouvel œuf n'est validé que si une 2ᵉ lecture, faite quelques minutes plus tard, le confirme.
-- 🧺 **Ramassage géré** : l'intégration suit le nombre d'œufs *présents dans les pondoirs* et compte chaque hausse. Ramasser les œufs à midi n'empêche plus de compter ceux pondus l'après-midi, et les œufs laissés la nuit ne sont pas recomptés le lendemain.
-- 🐔 **Poule sur le nid** : l'IA indique si une poule cache un nid. Une baisse n'est alors pas prise pour un ramassage.
-- 💸 **Économie d'appels IA** : si l'image n'a presque pas changé depuis la dernière analyse, l'IA n'est pas rappelée (au plus 1 h sans appel).
-- 🔁 **Nouvel essai automatique** si la caméra ou l'IA ne répond pas.
-- 🖼️ **Photos des détections** : à chaque œuf confirmé (et à chaque hausse non confirmée ou ramassage), les deux photos analysées sont gardées, avec les valeurs lues, pour comprendre une erreur de comptage. Elles sont visibles dans la carte et dans **Médias › Médias locaux › comptage_oeufs_poulailler**.
-- 📅 **Historique illimité**, corrigeable jour par jour (y compris aujourd'hui).
-- 🔔 **Notification** à chaque nouvel œuf (n'importe quelle entité `notify` ou action de notification) et événement `comptage_oeufs_poulailler_nouvel_oeuf` pour vos automatisations.
-- 🃏 **Carte Lovelace incluse**, sans dépendance (pas besoin d'apexcharts-card).
+![Lovelace card](docs/card.png)
 
-## Prérequis
+## Features
 
-- Home Assistant 2025.8 ou plus récent.
-- Une intégration d'IA qui fournit une entité **AI Task** capable d'analyser une image (ex. *Google Generative AI*, *OpenAI*).
-- Une caméra qui voit les pondoirs.
-- Un dossier média (par défaut `/media`, présent sur Home Assistant OS) pour conserver les photos.
+- 📷 **Automatic counting** every N minutes between an adjustable start and end time, plus a last count right at the end time (retried 5 min later if it fails).
+- ✅ **Double reading**: a new egg is only validated if a second reading, taken a few minutes later, confirms it.
+- 🧺 **Egg collection handled**: the integration tracks the number of eggs *currently in the nests* and counts every increase. Collecting the eggs at noon no longer hides the ones laid in the afternoon, and eggs left overnight are not counted again the next day.
+- 🐔 **Hen on the nest**: the AI says whether a hen is hiding a nest, so a drop is not mistaken for a collection.
+- 💸 **Fewer AI calls**: if the image has barely changed since the last analysis, the AI is not called again (at most 1 h without a call).
+- 🔁 **Automatic retries** (up to 4 attempts over ~3.5 min) when the camera or the AI does not answer, with the reason shown in the journal (e.g. “AI service overloaded”).
+- 🖼️ **Detection photos**: for every confirmed egg (and every unconfirmed rise or collection) both analysed photos are kept with the values read, to understand a counting mistake. They are shown in the card and in **Media › Local media › comptage_oeufs_poulailler**.
+- 📅 **Unlimited history**, editable day by day (today included).
+- 🔔 **Notification** on each new egg (any `notify` entity or notify action) and a `comptage_oeufs_poulailler_nouvel_oeuf` event for your automations.
+- 🃏 **Lovelace card included**, with no dependency.
+
+## Requirements
+
+- Home Assistant 2025.8 or newer.
+- An AI integration providing an **AI Task** entity able to analyse images (e.g. *Google Generative AI*, *OpenAI*). With Gemini, a “Lite” model such as `gemini-flash-lite-latest` is fast, cheap and less often overloaded.
+- A camera that sees the nesting boxes.
+- A media folder (`/media` by default, present on Home Assistant OS) to keep the photos.
 
 ## Installation
 
-### Avec HACS
-1. HACS › menu ⋮ › **Dépôts personnalisés** › ajoutez `https://github.com/JVmaisGpeur/ha-comptage-oeufs-poulailler`, catégorie **Intégration**.
-2. Installez **Comptage Œufs Poulailler**, puis redémarrez Home Assistant.
+### With HACS / the Marketplace
+1. Add the custom repository `https://github.com/JVmaisGpeur/ha-comptage-oeufs-poulailler`, category **Integration**.
+2. Install **Comptage Œufs Poulailler**, then restart Home Assistant.
 
-### Manuellement
-Copiez `custom_components/comptage_oeufs_poulailler` dans votre dossier `config/custom_components/`, puis redémarrez.
+### Manually
+Copy `custom_components/comptage_oeufs_poulailler` into your `config/custom_components/` folder, then restart.
 
 ## Configuration
 
-**Paramètres › Appareils et services › Ajouter une intégration › Comptage Œufs Poulailler**, puis choisissez :
+**Settings › Devices & services › Add integration › Comptage Œufs Poulailler**, then choose:
 
-| Champ | Rôle |
+| Field | Purpose |
 |---|---|
-| Nom du poulailler | Nom de l'appareil et préfixe des entités (`sensor.poulailler_…`) |
-| Caméra des pondoirs | Caméra analysée |
-| IA à utiliser | Entité `ai_task` (vide = IA par défaut) |
-| Nombre de pondoirs | Utilisé dans la consigne donnée à l'IA |
-| Notification | Entité `notify` prévenue à chaque nouvel œuf |
-| Importer l'historique | Un `input_text` au format `jj/mm/aa:n;…` à reprendre |
+| Coop name | Device name and entity prefix |
+| Nesting box camera | Camera to analyse |
+| AI to use | `ai_task` entity (empty = default AI task) |
+| Number of nesting boxes | Used in the instructions given to the AI |
+| Notification | `notify` entity alerted on each new egg |
+| Import history | Optional `input_text` in the `dd/mm/yy:n;…` format |
 
-Le bouton **Configurer** permet ensuite de changer la consigne de l'IA (`{pondoirs}` est remplacé par le nombre de pondoirs), le seuil de changement d'image, la durée de conservation des photos (30 jours par défaut) ou une action de notification (ex. `notify.mobile_app_telephone`).
+The **Configure** button then lets you change the AI instructions (`{pondoirs}` is replaced by the number of nesting boxes; keep the default text to follow Home Assistant's language), the image change threshold, the photo retention (30 days by default) or a notify action (e.g. `notify.mobile_app_phone`).
 
-## Carte
+## Card
 
-Elle est chargée automatiquement. Ajoutez-la à un tableau de bord :
+It is loaded automatically. Add it to a dashboard:
 
 ```yaml
 type: custom:comptage-oeufs-poulailler-card
 ```
 
-Options (toutes facultatives) :
+Options (all optional):
 
-| Option | Défaut | Description |
+| Option | Default | Description |
 |---|---|---|
-| `entry_id` | premier poulailler | Pour choisir un poulailler s'il y en a plusieurs |
-| `title` | nom du poulailler | Titre affiché |
-| `days` | `14` | Nombre de jours dans le graphique |
-| `history_days` | `60` | Nombre de jours dans l'historique |
-| `events` | `12` | Nombre de détections photo affichées |
-| `show_live_camera` | `false` | Flux caméra au lieu de la dernière photo analysée (réveille une caméra sur batterie) |
-| `show_camera`, `show_journal`, `show_chart`, `show_history`, `show_photos`, `show_settings` | `true` | Afficher / masquer chaque partie |
+| `entry_id` | first coop | Choose a coop if you have several |
+| `title` | coop name | Displayed title |
+| `language` | user's language | Force a language: `en`, `fr`, `de`, `es`, `it`, `nl`, `pt` |
+| `days` | `14` | Number of days in the chart |
+| `history_days` | `60` | Number of days in the history |
+| `events` | `12` | Number of photo detections shown |
+| `show_live_camera` | `false` | Live camera instead of the last analysed photo (wakes up a battery camera) |
+| `show_camera`, `show_journal`, `show_chart`, `show_history`, `show_photos`, `show_settings` | `true` | Show / hide each part |
 
-## Entités créées
+## Entities
 
-| Entité | Description |
+Entity IDs follow your language when the integration is added. With an English Home Assistant and a coop named “Coop”:
+
+| Entity | Description |
 |---|---|
-| `sensor.<nom>_oeufs_aujourd_hui` | Œufs pondus aujourd'hui (statistiques long terme) |
-| `sensor.<nom>_oeufs_hier`, `_oeufs_7_jours`, `_oeufs_ce_mois`, `_oeufs_cette_annee`, `_oeufs_total` | Totaux |
-| `sensor.<nom>_oeufs_dans_les_pondoirs` | Œufs actuellement vus dans les pondoirs |
-| `sensor.<nom>_etat_du_comptage` | Dernière étape (journal complet en attribut) |
-| `image.<nom>_dernier_oeuf_detecte` | Photo du dernier œuf confirmé |
-| `button.<nom>_compter_maintenant`, `button.<nom>_oeufs_ramasses` | Actions |
-| `switch.<nom>_comptage_automatique` | Pause / reprise |
-| `time.<nom>_heure_de_debut`, `time.<nom>_heure_de_fin` | Plage de comptage |
-| `number.<nom>_intervalle_de_comptage`, `number.<nom>_delai_de_confirmation` | Réglages (minutes) |
+| `sensor.coop_eggs_today` | Eggs laid today (long-term statistics) |
+| `sensor.coop_eggs_yesterday`, `_eggs_last_7_days`, `_eggs_this_month`, `_eggs_this_year`, `_eggs_total` | Totals |
+| `sensor.coop_eggs_in_nesting_boxes` | Eggs currently seen in the nests |
+| `sensor.coop_counting_status` | Last step (full journal as an attribute) |
+| `image.coop_last_detected_egg` | Photo of the last confirmed egg |
+| `button.coop_count_now`, `button.coop_eggs_collected` | Actions |
+| `switch.coop_automatic_counting` | Pause / resume |
+| `time.coop_start_time`, `time.coop_end_time` | Counting window |
+| `number.coop_counting_interval`, `number.coop_confirmation_delay` | Settings (minutes) |
 
-## Actions (services)
+## Actions
 
-| Action | Données |
+| Action | Data |
 |---|---|
-| `comptage_oeufs_poulailler.compter_maintenant` | – |
-| `comptage_oeufs_poulailler.corriger` | `date`, `nombre` |
-| `comptage_oeufs_poulailler.oeufs_ramasses` | `restants` (0 par défaut) |
-| `comptage_oeufs_poulailler.importer_historique` | `entity_id` d'un `input_text` |
+| `comptage_oeufs_poulailler.compter_maintenant` | – (count now) |
+| `comptage_oeufs_poulailler.corriger` | `date`, `nombre` (correct a day) |
+| `comptage_oeufs_poulailler.oeufs_ramasses` | `restants`, 0 by default (eggs collected) |
+| `comptage_oeufs_poulailler.importer_historique` | `entity_id` of an `input_text` (import history) |
 
-Toutes acceptent `config_entry_id` pour viser un poulailler précis.
+All accept `config_entry_id` to target one coop. Action names are kept in French for compatibility; their descriptions are translated in the UI.
 
-## Astuces
+## Tips
 
-- **Le comptage rate des œufs ?** Ouvrez « Photos des détections » : les deux photos et les valeurs lues montrent si c'est l'IA qui se trompe (affinez la consigne) ou la photo (cadrage, lumière).
-- **L'IA est appelée trop souvent ?** Montez le seuil de changement d'image (ex. 0,3 %). **Un œuf est raté ?** Baissez-le, ou mettez 0 pour toujours appeler l'IA.
-- **Caméra sur batterie** : réduisez la plage horaire et augmentez l'intervalle.
+- **Eggs are missed?** Open “Detection photos”: both photos and the values read show whether the AI is wrong (refine the instructions) or the picture (framing, light).
+- **The AI is called too often?** Raise the image change threshold (e.g. 0.3 %). **An egg is missed?** Lower it, or set 0 to always call the AI.
+- **“AI service overloaded” in the journal?** That comes from the AI provider. Try a lighter model (Gemini “Lite”).
+- **Battery camera**: shorten the time window and increase the interval.
 
-## Licence
+## Translations
+
+Add or fix a language:
+- `custom_components/comptage_oeufs_poulailler/translations/<lang>.json` – setup, entities, actions, errors;
+- `custom_components/comptage_oeufs_poulailler/i18n.py` – journal, notifications, AI instructions;
+- `custom_components/comptage_oeufs_poulailler/frontend/comptage-oeufs-poulailler-card.js` – the card (`I18N`).
+
+Pull requests welcome!
+
+## License
 
 MIT © JVmaisGpeur

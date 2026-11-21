@@ -1,12 +1,13 @@
 /*
- * Carte Lovelace « Comptage Œufs Poulailler »
- * Fournie et chargée automatiquement par l'intégration comptage_oeufs_poulailler.
- * Licence MIT – JVmaisGpeur
+ * Lovelace card « Comptage Œufs Poulailler » (Chicken Coop Egg Counter)
+ * Shipped and loaded automatically by the comptage_oeufs_poulailler integration.
+ * MIT License – JVmaisGpeur
  */
 const DOMAIN = "comptage_oeufs_poulailler";
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.1.0";
 
 const DEFAULTS = {
+  // language: "en", // force a language (default: the user's Home Assistant language)
   days: 14, // barres du graphique
   history_days: 60, // lignes de l'historique
   events: 12, // photos d'événements affichées
@@ -30,11 +31,163 @@ const parseIso = (s) => {
   return new Date(y, m - 1, d, 12);
 };
 
-const EVENT_LABELS = {
-  confirme: ["✅", "Nouvel œuf confirmé", "ok"],
-  rejete: ["❌", "Hausse non confirmée", "ko"],
-  ramassage: ["🧺", "Ramassage détecté", "info"],
+
+// ---------------------------------------------------------------- translations
+// Add a language: copy the "en" block, translate the values, keep {placeholders}.
+const I18N = {
+  en: {
+    loading: "Loading…", error_hint: "Is the “Comptage Œufs Poulailler” integration configured?",
+    status_counting: "⏳ Counting", status_paused: "⏸ Paused",
+    eggs_today_one: "egg laid today", eggs_today_other: "eggs laid today",
+    in_nests: "in the nests", yesterday: "yesterday", days7: "7 days", this_month: "this month",
+    count_now: "📷 Count now", collect: "🧺 Eggs collected", confirm: "Confirm?", pause: "⏸ Pause", resume: "▶ Resume",
+    count_started: "Count started…", invalid_number: "Invalid number", choose_date: "Choose a date and a number",
+    camera: "Camera", no_photo_yet: "No photo analysed yet.", last_photo: "Last analysed photo",
+    last_analysis: "Last analysis {time} · {n} egg(s)", hen_on_nest: "🐔 hen on a nest",
+    per_day: "Eggs per day", average: "average {mean}/day over {n} d", today: "today",
+    save: "Save", cancel: "Cancel", edit: "Correct", in_progress: "(in progress)",
+    history: "📅 History", year_total: "{year} this year · {total} total", no_history: "No history",
+    correct_other: "Correct another day:", eggs_ph: "eggs", apply: "Apply",
+    ev_confirme: "New egg confirmed", ev_rejete: "Rise not confirmed", ev_ramassage: "Collection detected",
+    reading: "Reading {n}", nests: "nests", no_photo: "No photo",
+    photos: "🖼️ Detection photos", recent: "{n} recent", photos_empty: "Photos of new eggs (and of unconfirmed readings) will appear here.",
+    settings: "⚙️ Settings", start: "Counting starts", end: "Counting ends", every: "Count every (min)", delay: "Delay before the 2nd reading (min)",
+    settings_hint: "Camera, AI, notification, AI instructions and photo retention: Settings › Devices & services › Comptage Œufs Poulailler › Configure.",
+    card_desc: "Egg counter, editable history, chart and detection photos.",
+  },
+  fr: {
+    loading: "Chargement…", error_hint: "L'intégration « Comptage Œufs Poulailler » est-elle configurée ?",
+    status_counting: "⏳ Comptage en cours", status_paused: "⏸ En pause",
+    eggs_today_one: "œuf pondu aujourd'hui", eggs_today_other: "œufs pondus aujourd'hui",
+    in_nests: "dans les pondoirs", yesterday: "hier", days7: "7 jours", this_month: "ce mois",
+    count_now: "📷 Compter maintenant", collect: "🧺 Œufs ramassés", confirm: "Confirmer ?", pause: "⏸ Pause", resume: "▶ Reprendre",
+    count_started: "Comptage lancé…", invalid_number: "Nombre invalide", choose_date: "Choisissez une date et un nombre",
+    camera: "Caméra", no_photo_yet: "Aucune photo analysée pour l'instant.", last_photo: "Dernière photo analysée",
+    last_analysis: "Dernière analyse {time} · {n} œuf(s)", hen_on_nest: "🐔 poule sur un nid",
+    per_day: "Œufs par jour", average: "moyenne {mean}/jour sur {n} j", today: "aujourd'hui",
+    save: "Enregistrer", cancel: "Annuler", edit: "Corriger", in_progress: "(en cours)",
+    history: "📅 Historique", year_total: "{year} cette année · {total} au total", no_history: "Aucun historique",
+    correct_other: "Corriger un autre jour :", eggs_ph: "œufs", apply: "Appliquer",
+    ev_confirme: "Nouvel œuf confirmé", ev_rejete: "Hausse non confirmée", ev_ramassage: "Ramassage détecté",
+    reading: "Lecture {n}", nests: "pondoirs", no_photo: "Pas de photo",
+    photos: "🖼️ Photos des détections", recent: "{n} récente(s)", photos_empty: "Les photos des nouveaux œufs (et des lectures non confirmées) apparaîtront ici.",
+    settings: "⚙️ Réglages", start: "Début du comptage", end: "Fin du comptage", every: "Comptage toutes les (min)", delay: "Délai avant la 2ᵉ lecture (min)",
+    settings_hint: "Caméra, IA, notification, consigne et conservation des photos : Paramètres › Appareils et services › Comptage Œufs Poulailler › Configurer.",
+    card_desc: "Compteur d'œufs, historique corrigeable, graphique et photos des détections.",
+  },
+  de: {
+    loading: "Wird geladen…", error_hint: "Ist die Integration „Comptage Œufs Poulailler“ eingerichtet?",
+    status_counting: "⏳ Zählung läuft", status_paused: "⏸ Pausiert",
+    eggs_today_one: "Ei heute gelegt", eggs_today_other: "Eier heute gelegt",
+    in_nests: "in den Nestern", yesterday: "gestern", days7: "7 Tage", this_month: "diesen Monat",
+    count_now: "📷 Jetzt zählen", collect: "🧺 Eier eingesammelt", confirm: "Bestätigen?", pause: "⏸ Pause", resume: "▶ Fortsetzen",
+    count_started: "Zählung gestartet…", invalid_number: "Ungültige Zahl", choose_date: "Datum und Anzahl wählen",
+    camera: "Kamera", no_photo_yet: "Noch kein Foto analysiert.", last_photo: "Zuletzt analysiertes Foto",
+    last_analysis: "Letzte Analyse {time} · {n} Ei(er)", hen_on_nest: "🐔 Huhn auf einem Nest",
+    per_day: "Eier pro Tag", average: "Durchschnitt {mean}/Tag über {n} T.", today: "heute",
+    save: "Speichern", cancel: "Abbrechen", edit: "Korrigieren", in_progress: "(läuft)",
+    history: "📅 Verlauf", year_total: "{year} dieses Jahr · {total} insgesamt", no_history: "Kein Verlauf",
+    correct_other: "Anderen Tag korrigieren:", eggs_ph: "Eier", apply: "Übernehmen",
+    ev_confirme: "Neues Ei bestätigt", ev_rejete: "Anstieg nicht bestätigt", ev_ramassage: "Einsammeln erkannt",
+    reading: "Messung {n}", nests: "Nester", no_photo: "Kein Foto",
+    photos: "🖼️ Erkennungsfotos", recent: "{n} neueste", photos_empty: "Fotos neuer Eier (und nicht bestätigter Messungen) erscheinen hier.",
+    settings: "⚙️ Einstellungen", start: "Beginn der Zählung", end: "Ende der Zählung", every: "Zählen alle (min)", delay: "Wartezeit vor der 2. Messung (min)",
+    settings_hint: "Kamera, KI, Benachrichtigung, KI-Anweisung und Fotoaufbewahrung: Einstellungen › Geräte & Dienste › Comptage Œufs Poulailler › Konfigurieren.",
+    card_desc: "Eierzähler, korrigierbarer Verlauf, Diagramm und Erkennungsfotos.",
+  },
+  es: {
+    loading: "Cargando…", error_hint: "¿Está configurada la integración «Comptage Œufs Poulailler»?",
+    status_counting: "⏳ Contando", status_paused: "⏸ En pausa",
+    eggs_today_one: "huevo puesto hoy", eggs_today_other: "huevos puestos hoy",
+    in_nests: "en los nidos", yesterday: "ayer", days7: "7 días", this_month: "este mes",
+    count_now: "📷 Contar ahora", collect: "🧺 Huevos recogidos", confirm: "¿Confirmar?", pause: "⏸ Pausa", resume: "▶ Reanudar",
+    count_started: "Recuento iniciado…", invalid_number: "Número no válido", choose_date: "Elige una fecha y un número",
+    camera: "Cámara", no_photo_yet: "Aún no se ha analizado ninguna foto.", last_photo: "Última foto analizada",
+    last_analysis: "Último análisis {time} · {n} huevo(s)", hen_on_nest: "🐔 gallina en un nido",
+    per_day: "Huevos por día", average: "media {mean}/día en {n} d", today: "hoy",
+    save: "Guardar", cancel: "Cancelar", edit: "Corregir", in_progress: "(en curso)",
+    history: "📅 Historial", year_total: "{year} este año · {total} en total", no_history: "Sin historial",
+    correct_other: "Corregir otro día:", eggs_ph: "huevos", apply: "Aplicar",
+    ev_confirme: "Nuevo huevo confirmado", ev_rejete: "Subida no confirmada", ev_ramassage: "Recogida detectada",
+    reading: "Lectura {n}", nests: "nidos", no_photo: "Sin foto",
+    photos: "🖼️ Fotos de detecciones", recent: "{n} reciente(s)", photos_empty: "Aquí aparecerán las fotos de los huevos nuevos (y de las lecturas no confirmadas).",
+    settings: "⚙️ Ajustes", start: "Inicio del recuento", end: "Fin del recuento", every: "Contar cada (min)", delay: "Espera antes de la 2.ª lectura (min)",
+    settings_hint: "Cámara, IA, notificación, instrucciones y conservación de fotos: Ajustes › Dispositivos y servicios › Comptage Œufs Poulailler › Configurar.",
+    card_desc: "Contador de huevos, historial editable, gráfico y fotos de detecciones.",
+  },
+  it: {
+    loading: "Caricamento…", error_hint: "L'integrazione «Comptage Œufs Poulailler» è configurata?",
+    status_counting: "⏳ Conteggio in corso", status_paused: "⏸ In pausa",
+    eggs_today_one: "uovo deposto oggi", eggs_today_other: "uova deposte oggi",
+    in_nests: "nei nidi", yesterday: "ieri", days7: "7 giorni", this_month: "questo mese",
+    count_now: "📷 Conta ora", collect: "🧺 Uova raccolte", confirm: "Confermare?", pause: "⏸ Pausa", resume: "▶ Riprendi",
+    count_started: "Conteggio avviato…", invalid_number: "Numero non valido", choose_date: "Scegli una data e un numero",
+    camera: "Telecamera", no_photo_yet: "Nessuna foto analizzata per ora.", last_photo: "Ultima foto analizzata",
+    last_analysis: "Ultima analisi {time} · {n} uovo/a", hen_on_nest: "🐔 gallina su un nido",
+    per_day: "Uova al giorno", average: "media {mean}/giorno su {n} g", today: "oggi",
+    save: "Salva", cancel: "Annulla", edit: "Correggi", in_progress: "(in corso)",
+    history: "📅 Cronologia", year_total: "{year} quest'anno · {total} in totale", no_history: "Nessuna cronologia",
+    correct_other: "Correggi un altro giorno:", eggs_ph: "uova", apply: "Applica",
+    ev_confirme: "Nuovo uovo confermato", ev_rejete: "Aumento non confermato", ev_ramassage: "Raccolta rilevata",
+    reading: "Lettura {n}", nests: "nidi", no_photo: "Nessuna foto",
+    photos: "🖼️ Foto dei rilevamenti", recent: "{n} recenti", photos_empty: "Qui appariranno le foto delle nuove uova (e delle letture non confermate).",
+    settings: "⚙️ Impostazioni", start: "Inizio del conteggio", end: "Fine del conteggio", every: "Conta ogni (min)", delay: "Attesa prima della 2ª lettura (min)",
+    settings_hint: "Telecamera, IA, notifica, istruzioni e conservazione delle foto: Impostazioni › Dispositivi e servizi › Comptage Œufs Poulailler › Configura.",
+    card_desc: "Contatore di uova, cronologia modificabile, grafico e foto dei rilevamenti.",
+  },
+  nl: {
+    loading: "Laden…", error_hint: "Is de integratie ‘Comptage Œufs Poulailler’ ingesteld?",
+    status_counting: "⏳ Bezig met tellen", status_paused: "⏸ Gepauzeerd",
+    eggs_today_one: "ei vandaag gelegd", eggs_today_other: "eieren vandaag gelegd",
+    in_nests: "in de nesten", yesterday: "gisteren", days7: "7 dagen", this_month: "deze maand",
+    count_now: "📷 Nu tellen", collect: "🧺 Eieren geraapt", confirm: "Bevestigen?", pause: "⏸ Pauze", resume: "▶ Hervatten",
+    count_started: "Telling gestart…", invalid_number: "Ongeldig getal", choose_date: "Kies een datum en een aantal",
+    camera: "Camera", no_photo_yet: "Nog geen foto geanalyseerd.", last_photo: "Laatst geanalyseerde foto",
+    last_analysis: "Laatste analyse {time} · {n} ei(eren)", hen_on_nest: "🐔 kip op een nest",
+    per_day: "Eieren per dag", average: "gemiddeld {mean}/dag over {n} d", today: "vandaag",
+    save: "Opslaan", cancel: "Annuleren", edit: "Corrigeren", in_progress: "(bezig)",
+    history: "📅 Geschiedenis", year_total: "{year} dit jaar · {total} totaal", no_history: "Geen geschiedenis",
+    correct_other: "Andere dag corrigeren:", eggs_ph: "eieren", apply: "Toepassen",
+    ev_confirme: "Nieuw ei bevestigd", ev_rejete: "Stijging niet bevestigd", ev_ramassage: "Rapen gedetecteerd",
+    reading: "Meting {n}", nests: "nesten", no_photo: "Geen foto",
+    photos: "🖼️ Detectiefoto's", recent: "{n} recent", photos_empty: "Foto's van nieuwe eieren (en van niet-bevestigde metingen) verschijnen hier.",
+    settings: "⚙️ Instellingen", start: "Start van de telling", end: "Einde van de telling", every: "Tellen elke (min)", delay: "Wachttijd vóór de 2e meting (min)",
+    settings_hint: "Camera, AI, melding, AI-instructies en bewaartermijn van foto's: Instellingen › Apparaten & diensten › Comptage Œufs Poulailler › Configureren.",
+    card_desc: "Eierteller, aanpasbare geschiedenis, grafiek en detectiefoto's.",
+  },
+  pt: {
+    loading: "A carregar…", error_hint: "A integração «Comptage Œufs Poulailler» está configurada?",
+    status_counting: "⏳ A contar", status_paused: "⏸ Em pausa",
+    eggs_today_one: "ovo posto hoje", eggs_today_other: "ovos postos hoje",
+    in_nests: "nos ninhos", yesterday: "ontem", days7: "7 dias", this_month: "este mês",
+    count_now: "📷 Contar agora", collect: "🧺 Ovos recolhidos", confirm: "Confirmar?", pause: "⏸ Pausa", resume: "▶ Retomar",
+    count_started: "Contagem iniciada…", invalid_number: "Número inválido", choose_date: "Escolha uma data e um número",
+    camera: "Câmara", no_photo_yet: "Ainda nenhuma foto analisada.", last_photo: "Última foto analisada",
+    last_analysis: "Última análise {time} · {n} ovo(s)", hen_on_nest: "🐔 galinha num ninho",
+    per_day: "Ovos por dia", average: "média {mean}/dia em {n} d", today: "hoje",
+    save: "Guardar", cancel: "Cancelar", edit: "Corrigir", in_progress: "(em curso)",
+    history: "📅 Histórico", year_total: "{year} este ano · {total} no total", no_history: "Sem histórico",
+    correct_other: "Corrigir outro dia:", eggs_ph: "ovos", apply: "Aplicar",
+    ev_confirme: "Novo ovo confirmado", ev_rejete: "Subida não confirmada", ev_ramassage: "Recolha detetada",
+    reading: "Leitura {n}", nests: "ninhos", no_photo: "Sem foto",
+    photos: "🖼️ Fotos das deteções", recent: "{n} recente(s)", photos_empty: "As fotos dos ovos novos (e das leituras não confirmadas) aparecerão aqui.",
+    settings: "⚙️ Definições", start: "Início da contagem", end: "Fim da contagem", every: "Contar a cada (min)", delay: "Espera antes da 2.ª leitura (min)",
+    settings_hint: "Câmara, IA, notificação, instruções e conservação das fotos: Definições › Dispositivos e serviços › Comptage Œufs Poulailler › Configurar.",
+    card_desc: "Contador de ovos, histórico editável, gráfico e fotos das deteções.",
+  },
 };
+
+const langOf = (lang) => {
+  const base = String(lang || "en").toLowerCase().split(/[-_]/)[0];
+  return I18N[base] ? base : "en";
+};
+
+const translate = (lang, key, params = {}) => {
+  const template = I18N[langOf(lang)][key] ?? I18N.en[key] ?? key;
+  return template.replace(/\{(\w+)\}/g, (m, k) => (k in params ? params[k] : m));
+};
+
+const EVENT_STYLES = { confirme: ["✅", "ok"], rejete: ["❌", "ko"], ramassage: ["🧺", "info"] };
 
 class ComptageOeufsPoulaillerCard extends HTMLElement {
   constructor() {
@@ -129,6 +282,7 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
         type: `${DOMAIN}/data`,
         days: Math.max(this._config.days, this._config.history_days),
         events: this._config.events,
+        language: this._lang,
       };
       if (this._config.entry_id) msg.entry_id = this._config.entry_id;
       this._data = await this._hass.callWS(msg);
@@ -146,6 +300,14 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
   _hasFocus() {
     const el = this.shadowRoot.activeElement;
     return el && ["INPUT", "SELECT", "TEXTAREA"].includes(el.tagName);
+  }
+
+  get _lang() {
+    return langOf(this._config?.language || this._hass?.locale?.language || this._hass?.language);
+  }
+
+  _t(key, params) {
+    return translate(this._lang, key, params);
   }
 
   _entity(key) {
@@ -172,7 +334,7 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
     switch (action) {
       case "count":
         this._service(DOMAIN, "compter_maintenant", entry);
-        this._toast("Comptage lancé…");
+        this._toast(this._t("count_started"));
         break;
       case "collect":
         if (!this._confirmCollect) {
@@ -204,7 +366,7 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
       case "save": {
         const input = this.shadowRoot.querySelector("input.edit");
         const n = parseInt(input?.value, 10);
-        if (Number.isNaN(n) || n < 0) return this._toast("Nombre invalide");
+        if (Number.isNaN(n) || n < 0) return this._toast(this._t("invalid_number"));
         this._service(DOMAIN, "corriger", { ...entry, date: this._editing, nombre: n });
         this._editing = null;
         break;
@@ -212,7 +374,7 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
       case "correct": {
         const date = this.shadowRoot.querySelector("#corr-date")?.value;
         const n = parseInt(this.shadowRoot.querySelector("#corr-n")?.value, 10);
-        if (!date || Number.isNaN(n) || n < 0) return this._toast("Choisissez une date et un nombre");
+        if (!date || Number.isNaN(n) || n < 0) return this._toast(this._t("choose_date"));
         this._service(DOMAIN, "corriger", { ...entry, date, nombre: n });
         break;
       }
@@ -245,13 +407,13 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
 
   // ------------------------------------------------------------------ rendu
   _fmtDate(isoDate, opts) {
-    const lang = this._hass?.locale?.language || this._hass?.language || "fr";
+    const lang = this._config?.language || this._hass?.locale?.language || this._hass?.language || "en";
     return parseIso(isoDate).toLocaleDateString(lang, opts);
   }
 
   _fmtTime(isoDateTime) {
     if (!isoDateTime) return "";
-    const lang = this._hass?.locale?.language || "fr";
+    const lang = this._config?.language || this._hass?.locale?.language || "en";
     const d = new Date(isoDateTime);
     const sameDay = iso(d) === this._data.today_date;
     return sameDay
@@ -269,9 +431,9 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
     const c = this._config;
     let body;
     if (this._error) {
-      body = `<div class="empty">⚠️ ${esc(this._error)}<br><small>L'intégration « Comptage Œufs Poulailler » est-elle configurée ?</small></div>`;
+      body = `<div class="empty">⚠️ ${esc(this._error)}<br><small>${esc(this._t("error_hint"))}</small></div>`;
     } else if (!this._data) {
-      body = `<div class="empty">Chargement…</div>`;
+      body = `<div class="empty">${this._t("loading")}</div>`;
     } else {
       body = [
         this._renderHero(),
@@ -292,26 +454,26 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
     const s = d.stats || {};
     const title = this._config.title ?? d.title;
     const status = d.counting
-      ? `<span class="chip busy">⏳ Comptage en cours</span>`
+      ? `<span class="chip busy">${this._t("status_counting")}</span>`
       : d.auto
         ? `<span class="chip on">● Auto ${esc(d.settings.start.slice(0, 5))}–${esc(d.settings.end.slice(0, 5))}</span>`
-        : `<span class="chip off">⏸ En pause</span>`;
+        : `<span class="chip off">${this._t("status_paused")}</span>`;
     return `
       <div class="head"><div class="title">🥚 ${esc(title)}</div>${status}</div>
       <div class="hero">
         <div class="big">${d.today}</div>
-        <div class="big-label">œuf${d.today > 1 ? "s" : ""} pondu${d.today > 1 ? "s" : ""} aujourd'hui</div>
+        <div class="big-label">${this._t(d.today === 1 ? "eggs_today_one" : "eggs_today_other")}</div>
         <div class="kpis">
-          <div><b>${d.baseline ?? "–"}</b><span>dans les pondoirs</span></div>
-          <div><b>${s.hier ?? 0}</b><span>hier</span></div>
-          <div><b>${s["7_jours"] ?? 0}</b><span>7 jours</span></div>
-          <div><b>${s.ce_mois ?? 0}</b><span>ce mois</span></div>
+          <div><b>${d.baseline ?? "–"}</b><span>${this._t("in_nests")}</span></div>
+          <div><b>${s.hier ?? 0}</b><span>${this._t("yesterday")}</span></div>
+          <div><b>${s["7_jours"] ?? 0}</b><span>${this._t("days7")}</span></div>
+          <div><b>${s.ce_mois ?? 0}</b><span>${this._t("this_month")}</span></div>
         </div>
       </div>
       <div class="actions">
-        <button class="primary" data-action="count" ${d.counting ? "disabled" : ""}>📷 Compter maintenant</button>
-        <button class="${this._confirmCollect ? "warn" : ""}" data-action="collect">${this._confirmCollect ? "Confirmer ?" : "🧺 Œufs ramassés"}</button>
-        <button data-action="toggle-auto">${d.auto ? "⏸ Pause" : "▶ Reprendre"}</button>
+        <button class="primary" data-action="count" ${d.counting ? "disabled" : ""}>${this._t("count_now")}</button>
+        <button class="${this._confirmCollect ? "warn" : ""}" data-action="collect">${this._t(this._confirmCollect ? "confirm" : "collect")}</button>
+        <button data-action="toggle-auto">${this._t(d.auto ? "pause" : "resume")}</button>
       </div>`;
   }
 
@@ -320,12 +482,12 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
     const last = d.last_reading || {};
     if (this._config.show_live_camera) {
       const src = this._hass.states[d.camera]?.attributes?.entity_picture;
-      return src ? `<img class="photo live" data-src="${esc(src)}" src="${esc(src)}" alt="Caméra">` : "";
+      return src ? `<img class="photo live" data-src="${esc(src)}" src="${esc(src)}" alt="${esc(this._t("camera"))}">` : "";
     }
-    if (!d.last_image_url) return `<div class="empty small">Aucune photo analysée pour l'instant.</div>`;
-    const cap = `Dernière analyse ${this._fmtTime(last.time)} · ${last.eggs} œuf(s)${last.hen ? " · 🐔 poule sur un nid" : ""}`;
+    if (!d.last_image_url) return `<div class="empty small">${this._t("no_photo_yet")}</div>`;
+    const cap = this._t("last_analysis", { time: this._fmtTime(last.time), n: last.eggs }) + (last.hen ? ` · ${this._t("hen_on_nest")}` : "");
     return `<figure>
-        <img class="photo" src="${esc(d.last_image_url)}" alt="Dernière photo analysée" data-action="zoom" data-src="${esc(d.last_image_url)}" data-caption="${esc(cap)}">
+        <img class="photo" src="${esc(d.last_image_url)}" alt="${esc(this._t("last_photo"))}" data-action="zoom" data-src="${esc(d.last_image_url)}" data-caption="${esc(cap)}">
         <figcaption>${esc(cap)}</figcaption></figure>`;
   }
 
@@ -370,7 +532,7 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
     const avg = days.filter((x) => x.key !== d.today_date && x.value != null);
     const mean = avg.length ? (avg.reduce((a, x) => a + x.value, 0) / avg.length).toFixed(1) : "–";
     return `<div class="section">
-        <div class="section-title">Œufs par jour <small>moyenne ${mean}/jour sur ${avg.length} j · <span class="dot today"></span> aujourd'hui</small></div>
+        <div class="section-title">${this._t("per_day")} <small>${this._t("average", { mean, n: avg.length })} · <span class="dot today"></span> ${this._t("today")}</small></div>
         <svg viewBox="0 0 ${n * W} ${top + H + 20}" preserveAspectRatio="xMidYMid meet">${bars}</svg>
       </div>`;
   }
@@ -387,22 +549,22 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
         if (this._editing === h.date) {
           return `<tr class="editing"><td>${esc(label)}</td><td class="num">
               <input class="edit" type="number" min="0" max="999" value="${count}" data-enter="save">
-              <button class="icon" data-action="save" title="Enregistrer">✓</button>
-              <button class="icon" data-action="cancel" title="Annuler">✕</button></td></tr>`;
+              <button class="icon" data-action="save" title="${esc(this._t("save"))}">✓</button>
+              <button class="icon" data-action="cancel" title="${esc(this._t("cancel"))}">✕</button></td></tr>`;
         }
-        return `<tr class="${isToday ? "today" : ""}"><td>${esc(label)}${isToday ? " <em>(en cours)</em>" : ""}</td>
-            <td class="num">${count}<button class="icon ghost" data-action="edit" data-date="${h.date}" title="Corriger">✏️</button></td></tr>`;
+        return `<tr class="${isToday ? "today" : ""}"><td>${esc(label)}${isToday ? ` <em>${this._t("in_progress")}</em>` : ""}</td>
+            <td class="num">${count}<button class="icon ghost" data-action="edit" data-date="${h.date}" title="${esc(this._t("edit"))}">✏️</button></td></tr>`;
       })
       .join("");
     const s = d.stats || {};
     return `<details class="section" data-section="history" ${this._open.has("history") ? "open" : ""}>
-        <summary>📅 Historique <small>${s.cette_annee ?? 0} cette année · ${s.total ?? 0} au total</small></summary>
-        <div class="scroll"><table>${rows || `<tr><td>Aucun historique</td></tr>`}</table></div>
+        <summary>${this._t("history")} <small>${this._t("year_total", { year: s.cette_annee ?? 0, total: s.total ?? 0 })}</small></summary>
+        <div class="scroll"><table>${rows || `<tr><td>${this._t("no_history")}</td></tr>`}</table></div>
         <div class="correct">
-          <span>Corriger un autre jour :</span>
+          <span>${this._t("correct_other")}</span>
           <input id="corr-date" type="date" max="${d.today_date}">
-          <input id="corr-n" type="number" min="0" max="999" placeholder="œufs" data-enter="correct">
-          <button data-action="correct">Appliquer</button>
+          <input id="corr-n" type="number" min="0" max="999" placeholder="${esc(this._t("eggs_ph"))}" data-enter="correct">
+          <button data-action="correct">${this._t("apply")}</button>
         </div>
       </details>`;
   }
@@ -411,40 +573,43 @@ class ComptageOeufsPoulaillerCard extends HTMLElement {
     const events = this._data.events || [];
     const items = events
       .map((e) => {
-        const [icon, label, cls] = EVENT_LABELS[e.type] || ["•", e.type, ""];
+        const [icon, cls] = EVENT_STYLES[e.type] || ["•", ""];
+        const label = this._t(`ev_${e.type}`);
+        const r1 = this._t("reading", { n: 1 });
+        const r2 = this._t("reading", { n: 2 });
         const when = this._fmtTime(e.time);
-        const detail = `Lecture 1 : ${e.lecture1}${e.poule1 ? " 🐔" : ""} · Lecture 2 : ${e.lecture2}${e.poule2 ? " 🐔" : ""} · pondoirs ${e.avant} → ${e.apres}`;
+        const detail = `${r1}: ${e.lecture1}${e.poule1 ? " 🐔" : ""} · ${r2}: ${e.lecture2}${e.poule2 ? " 🐔" : ""} · ${this._t("nests")} ${e.avant} → ${e.apres}`;
         const imgs = (e.urls || [])
           .filter(Boolean)
           .map(
             (u, i) =>
-              `<img loading="lazy" src="${esc(u)}" alt="Lecture ${i + 1}" data-action="zoom" data-src="${esc(u)}" data-caption="${esc(`${when} – ${label} – lecture ${i + 1}`)}">`
+              `<img loading="lazy" src="${esc(u)}" alt="${esc(i ? r2 : r1)}" data-action="zoom" data-src="${esc(u)}" data-caption="${esc(`${when} – ${label} – ${i ? r2 : r1}`)}">`
           )
           .join("");
         return `<div class="event ${cls}">
             <div class="event-head"><span>${icon} ${esc(label)}</span><small>${esc(when)}</small></div>
             <div class="event-detail">${esc(detail)}</div>
-            <div class="thumbs">${imgs || "<small>Pas de photo</small>"}</div>
+            <div class="thumbs">${imgs || `<small>${this._t("no_photo")}</small>`}</div>
           </div>`;
       })
       .join("");
     return `<details class="section" data-section="photos" ${this._open.has("photos") ? "open" : ""}>
-        <summary>🖼️ Photos des détections <small>${events.length} récente(s)</small></summary>
-        ${items || `<div class="empty small">Les photos des nouveaux œufs (et des lectures non confirmées) apparaîtront ici.</div>`}
+        <summary>${this._t("photos")} <small>${this._t("recent", { n: events.length })}</small></summary>
+        ${items || `<div class="empty small">${this._t("photos_empty")}</div>`}
       </details>`;
   }
 
   _renderSettings() {
     const s = this._data.settings;
     return `<details class="section" data-section="settings" ${this._open.has("settings") ? "open" : ""}>
-        <summary>⚙️ Réglages</summary>
+        <summary>${this._t("settings")}</summary>
         <div class="settings">
-          <label>Début du comptage <input type="time" data-setting="heure_de_debut" value="${esc(s.start.slice(0, 5))}"></label>
-          <label>Fin du comptage <input type="time" data-setting="heure_de_fin" value="${esc(s.end.slice(0, 5))}"></label>
-          <label>Comptage toutes les (min) <input type="number" min="5" max="120" step="5" data-setting="intervalle_de_comptage" value="${s.interval}"></label>
-          <label>Délai avant la 2ᵉ lecture (min) <input type="number" min="1" max="15" data-setting="delai_de_confirmation" value="${s.delay}"></label>
+          <label>${this._t("start")} <input type="time" data-setting="heure_de_debut" value="${esc(s.start.slice(0, 5))}"></label>
+          <label>${this._t("end")} <input type="time" data-setting="heure_de_fin" value="${esc(s.end.slice(0, 5))}"></label>
+          <label>${this._t("every")} <input type="number" min="5" max="120" step="5" data-setting="intervalle_de_comptage" value="${s.interval}"></label>
+          <label>${this._t("delay")} <input type="number" min="1" max="15" data-setting="delai_de_confirmation" value="${s.delay}"></label>
         </div>
-        <small class="hint">Caméra, IA, notification, consigne et conservation des photos : Paramètres › Appareils et services › Comptage Œufs Poulailler › Configurer.</small>
+        <small class="hint">${this._t("settings_hint")}</small>
       </details>`;
   }
 }
@@ -524,7 +689,7 @@ if (!customElements.get("comptage-oeufs-poulailler-card")) {
   window.customCards.push({
     type: "comptage-oeufs-poulailler-card",
     name: "Comptage Œufs Poulailler",
-    description: "Compteur d'œufs, historique corrigeable, graphique et photos des détections.",
+    description: translate(navigator.language, "card_desc"),
     preview: false,
     documentationURL: "https://github.com/JVmaisGpeur/ha-comptage-oeufs-poulailler",
   });

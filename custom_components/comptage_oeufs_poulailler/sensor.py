@@ -1,4 +1,4 @@
-"""Capteurs : œufs du jour, totaux, œufs dans les pondoirs, état du comptage."""
+"""Sensors: eggs today, totals, eggs in the nests, counting status."""
 
 from __future__ import annotations
 
@@ -17,7 +17,6 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .entity import PoulaillerEntity
 from .manager import PoulaillerManager
 
-UNIT = "œufs"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -29,44 +28,37 @@ SENSORS: tuple[EggSensorDescription, ...] = (
     EggSensorDescription(
         key="oeufs_aujourd_hui",
         icon="mdi:egg",
-        native_unit_of_measurement=UNIT,
         state_class=SensorStateClass.MEASUREMENT,
         value=lambda m: m.data["today"],
     ),
     EggSensorDescription(
         key="oeufs_hier",
         icon="mdi:egg-outline",
-        native_unit_of_measurement=UNIT,
         value=lambda m: m.stats()["hier"],
     ),
     EggSensorDescription(
         key="oeufs_7_jours",
         icon="mdi:calendar-week",
-        native_unit_of_measurement=UNIT,
         value=lambda m: m.stats()["7_jours"],
     ),
     EggSensorDescription(
         key="oeufs_ce_mois",
         icon="mdi:calendar-month",
-        native_unit_of_measurement=UNIT,
         value=lambda m: m.stats()["ce_mois"],
     ),
     EggSensorDescription(
         key="oeufs_cette_annee",
         icon="mdi:calendar",
-        native_unit_of_measurement=UNIT,
         value=lambda m: m.stats()["cette_annee"],
     ),
     EggSensorDescription(
         key="oeufs_total",
         icon="mdi:sigma",
-        native_unit_of_measurement=UNIT,
         value=lambda m: m.stats()["total"],
     ),
     EggSensorDescription(
         key="oeufs_dans_les_pondoirs",
         icon="mdi:basket",
-        native_unit_of_measurement=UNIT,
         value=lambda m: m.data["baseline"],
     ),
 )
@@ -119,9 +111,9 @@ class StatusSensor(PoulaillerEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
-        journal = self.manager.data["journal"]
+        journal = self.manager.journal(count=1)
         return journal[-1][:255] if journal else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"en_cours": self.manager.counting, "journal": self.manager.data["journal"][-20:]}
+        return {"en_cours": self.manager.counting, "journal": self.manager.journal(count=20)}

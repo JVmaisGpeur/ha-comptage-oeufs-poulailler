@@ -1,0 +1,187 @@
+{
+  "title": "Eierteller kippenhok",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Eierteller kippenhok",
+        "description": "Een camera filmt de legnesten; de AI van Home Assistant (AI-taak) telt de eieren.",
+        "data": {
+          "name": "Naam van het kippenhok",
+          "camera": "Camera van de legnesten",
+          "ai_task_entity": "Te gebruiken AI (leeg = standaard AI-taak)",
+          "nests": "Aantal legnesten",
+          "notify_entity": "Melding bij elk nieuw ei",
+          "import_entity": "Geschiedenis importeren uit (oud formaat dd/mm/jj:n)"
+        },
+        "data_description": {
+          "import_entity": "Optioneel: importeert een bestaande geschiedenis uit een input_text-helper."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Deze camera wordt al door een kippenhok gebruikt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opties van het kippenhok",
+        "data": {
+          "camera": "Camera van de legnesten",
+          "ai_task_entity": "Te gebruiken AI (leeg = standaard AI-taak)",
+          "nests": "Aantal legnesten",
+          "notify_entity": "Meldingsentiteit",
+          "notify_service": "Of meldingsactie (bijv. notify.mobile_app_telefoon)",
+          "prompt": "Instructies voor de AI",
+          "sensitivity": "Drempel voor beeldwijziging voordat de AI wordt aangeroepen",
+          "snapshot_days": "Bewaartermijn van foto's"
+        },
+        "data_description": {
+          "prompt": "{pondoirs} wordt vervangen door het aantal legnesten. Laat de standaardtekst staan om de taal van Home Assistant te volgen.",
+          "sensitivity": "Als sinds de laatste analyse minder pixels dan dit percentage zijn gewijzigd, wordt de AI niet opnieuw aangeroepen (0 = AI altijd aanroepen)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "oeufs_aujourd_hui": {
+        "name": "Eieren vandaag",
+        "unit_of_measurement": "eieren"
+      },
+      "oeufs_hier": {
+        "name": "Eieren gisteren",
+        "unit_of_measurement": "eieren"
+      },
+      "oeufs_7_jours": {
+        "name": "Eieren laatste 7 dagen",
+        "unit_of_measurement": "eieren"
+      },
+      "oeufs_ce_mois": {
+        "name": "Eieren deze maand",
+        "unit_of_measurement": "eieren"
+      },
+      "oeufs_cette_annee": {
+        "name": "Eieren dit jaar",
+        "unit_of_measurement": "eieren"
+      },
+      "oeufs_total": {
+        "name": "Eieren totaal",
+        "unit_of_measurement": "eieren"
+      },
+      "oeufs_dans_les_pondoirs": {
+        "name": "Eieren in de legnesten",
+        "unit_of_measurement": "eieren"
+      },
+      "etat_du_comptage": {
+        "name": "Status van de telling"
+      }
+    },
+    "button": {
+      "compter_maintenant": {
+        "name": "Nu tellen"
+      },
+      "oeufs_ramasses": {
+        "name": "Eieren geraapt"
+      }
+    },
+    "switch": {
+      "comptage_automatique": {
+        "name": "Automatisch tellen"
+      }
+    },
+    "number": {
+      "intervalle_de_comptage": {
+        "name": "Telinterval"
+      },
+      "delai_de_confirmation": {
+        "name": "Bevestigingsvertraging"
+      }
+    },
+    "time": {
+      "heure_de_debut": {
+        "name": "Begintijd"
+      },
+      "heure_de_fin": {
+        "name": "Eindtijd"
+      }
+    },
+    "image": {
+      "dernier_oeuf_detecte": {
+        "name": "Laatst gedetecteerd ei"
+      }
+    }
+  },
+  "services": {
+    "compter_maintenant": {
+      "name": "Nu tellen",
+      "description": "Start nu een camera- + AI-meting.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kippenhok",
+          "description": "Leeg = alle kippenhokken."
+        }
+      }
+    },
+    "corriger": {
+      "name": "Een dag corrigeren",
+      "description": "Stelt het aantal gelegde eieren op een bepaalde dag in (vandaag inbegrepen).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kippenhok",
+          "description": "Leeg = alle kippenhokken."
+        },
+        "date": {
+          "name": "Datum",
+          "description": "Te corrigeren dag."
+        },
+        "nombre": {
+          "name": "Aantal eieren",
+          "description": "Werkelijk aantal eieren gelegd op die dag."
+        }
+      }
+    },
+    "oeufs_ramasses": {
+      "name": "Eieren geraapt",
+      "description": "Meldt dat de eieren zijn geraapt, zodat de volgende niet gemist worden.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kippenhok",
+          "description": "Leeg = alle kippenhokken."
+        },
+        "restants": {
+          "name": "Achtergelaten eieren",
+          "description": "In de nesten gelaten eieren (bijv. een nepei)."
+        }
+      }
+    },
+    "importer_historique": {
+      "name": "Geschiedenis importeren",
+      "description": "Importeert een geschiedenis dd/mm/jj:n;… uit een input_text (bekende dagen blijven behouden).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kippenhok",
+          "description": "Leeg = alle kippenhokken."
+        },
+        "entity_id": {
+          "name": "Entiteit",
+          "description": "input_text met de geschiedenis."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "future_date": {
+      "message": "De datum {date} ligt in de toekomst."
+    },
+    "entity_not_found": {
+      "message": "Entiteit {entity_id} niet gevonden."
+    },
+    "entry_not_found": {
+      "message": "Kippenhok {entry_id} niet gevonden."
+    },
+    "no_entry": {
+      "message": "Er is geen kippenhok ingesteld."
+    }
+  }
+}
