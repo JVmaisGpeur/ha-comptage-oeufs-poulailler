@@ -1,0 +1,165 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Chicken Coop Egg Counter",
+        "description": "A camera films the nesting boxes; Home Assistant's AI (ai_task) counts the eggs.",
+        "data": {
+          "name": "Coop name",
+          "camera": "Nesting box camera",
+          "ai_task_entity": "AI to use (empty = default AI task)",
+          "nests": "Number of nesting boxes",
+          "notify_entity": "Notification on each new egg",
+          "import_entity": "Import history from (old dd/mm/yy:n format)"
+        },
+        "data_description": {
+          "import_entity": "Optional: imports history from an existing input_text."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This camera is already used by a coop."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Coop options",
+        "data": {
+          "camera": "Nesting box camera",
+          "ai_task_entity": "AI to use (empty = default AI task)",
+          "nests": "Number of nesting boxes",
+          "notify_entity": "Notify entity",
+          "notify_service": "Or notify action (e.g. notify.mobile_app_phone)",
+          "prompt": "Instructions given to the AI",
+          "sensitivity": "Image change threshold before calling the AI",
+          "snapshot_days": "Photo retention"
+        },
+        "data_description": {
+          "prompt": "{pondoirs} is replaced by the number of nesting boxes.",
+          "sensitivity": "If fewer pixels than this percentage changed since the last analysis, the AI is not called again (0 = always call the AI)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "oeufs_aujourd_hui": {
+        "name": "Eggs today"
+      },
+      "oeufs_hier": {
+        "name": "Eggs yesterday"
+      },
+      "oeufs_7_jours": {
+        "name": "Eggs last 7 days"
+      },
+      "oeufs_ce_mois": {
+        "name": "Eggs this month"
+      },
+      "oeufs_cette_annee": {
+        "name": "Eggs this year"
+      },
+      "oeufs_total": {
+        "name": "Eggs total"
+      },
+      "oeufs_dans_les_pondoirs": {
+        "name": "Eggs in nesting boxes"
+      },
+      "etat_du_comptage": {
+        "name": "Counting status"
+      }
+    },
+    "button": {
+      "compter_maintenant": {
+        "name": "Count now"
+      },
+      "oeufs_ramasses": {
+        "name": "Eggs collected"
+      }
+    },
+    "switch": {
+      "comptage_automatique": {
+        "name": "Automatic counting"
+      }
+    },
+    "number": {
+      "intervalle_de_comptage": {
+        "name": "Counting interval"
+      },
+      "delai_de_confirmation": {
+        "name": "Confirmation delay"
+      }
+    },
+    "time": {
+      "heure_de_debut": {
+        "name": "Start time"
+      },
+      "heure_de_fin": {
+        "name": "End time"
+      }
+    },
+    "image": {
+      "dernier_oeuf_detecte": {
+        "name": "Last detected egg"
+      }
+    }
+  },
+  "services": {
+    "compter_maintenant": {
+      "name": "Count now",
+      "description": "Runs a camera + AI reading now.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Coop",
+          "description": "Empty = all coops."
+        }
+      }
+    },
+    "corriger": {
+      "name": "Correct a day",
+      "description": "Sets the number of eggs laid on a given day (today included).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Coop",
+          "description": "Empty = all coops."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Day to correct."
+        },
+        "nombre": {
+          "name": "Number of eggs",
+          "description": "Actual number of eggs laid that day."
+        }
+      }
+    },
+    "oeufs_ramasses": {
+      "name": "Eggs collected",
+      "description": "Tells the counter eggs were collected so the next ones are not missed.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Coop",
+          "description": "Empty = all coops."
+        },
+        "restants": {
+          "name": "Eggs left",
+          "description": "Eggs left in the nests (e.g. a dummy egg)."
+        }
+      }
+    },
+    "importer_historique": {
+      "name": "Import history",
+      "description": "Imports a dd/mm/yy:n;… history from an input_text (known days are kept).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Coop",
+          "description": "Empty = all coops."
+        },
+        "entity_id": {
+          "name": "Entity",
+          "description": "input_text holding the history."
+        }
+      }
+    }
+  }
+}

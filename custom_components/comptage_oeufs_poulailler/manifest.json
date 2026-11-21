@@ -1,0 +1,29 @@
+{
+  "domain": "comptage_oeufs_poulailler",
+  "name": "Comptage Œufs Poulailler",
+  "after_dependencies": [
+    "ai_task",
+    "notify"
+  ],
+  "categories": [
+    "pets",
+    "ai_voice.image_recognition"
+  ],
+  "codeowners": [
+    "@JVmaisGpeur"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "camera",
+    "frontend",
+    "http",
+    "media_source",
+    "websocket_api"
+  ],
+  "documentation": "https://github.com/JVmaisGpeur/ha-comptage-oeufs-poulailler",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/JVmaisGpeur/ha-comptage-oeufs-poulailler/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

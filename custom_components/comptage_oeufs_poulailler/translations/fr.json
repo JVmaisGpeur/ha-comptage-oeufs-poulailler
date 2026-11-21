@@ -1,0 +1,165 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Comptage Œufs Poulailler",
+        "description": "Une caméra filme les pondoirs ; l'IA de Home Assistant (ai_task) compte les œufs.",
+        "data": {
+          "name": "Nom du poulailler",
+          "camera": "Caméra des pondoirs",
+          "ai_task_entity": "IA à utiliser (vide = IA par défaut)",
+          "nests": "Nombre de pondoirs",
+          "notify_entity": "Notification à chaque nouvel œuf",
+          "import_entity": "Importer l'historique depuis (ancien format jj/mm/aa:n)"
+        },
+        "data_description": {
+          "import_entity": "Optionnel : reprend l'historique de l'ancien tableau de bord."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Cette caméra est déjà utilisée par un poulailler."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options du poulailler",
+        "data": {
+          "camera": "Caméra des pondoirs",
+          "ai_task_entity": "IA à utiliser (vide = IA par défaut)",
+          "nests": "Nombre de pondoirs",
+          "notify_entity": "Entité de notification",
+          "notify_service": "Ou service de notification (ex. notify.mobile_app_telephone)",
+          "prompt": "Consigne donnée à l'IA",
+          "sensitivity": "Seuil de changement d'image avant d'appeler l'IA",
+          "snapshot_days": "Durée de conservation des photos"
+        },
+        "data_description": {
+          "prompt": "{pondoirs} est remplacé par le nombre de pondoirs.",
+          "sensitivity": "Si moins de ce pourcentage de pixels a changé depuis la dernière analyse, l'IA n'est pas rappelée (0 = toujours appeler l'IA)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "oeufs_aujourd_hui": {
+        "name": "Œufs aujourd'hui"
+      },
+      "oeufs_hier": {
+        "name": "Œufs hier"
+      },
+      "oeufs_7_jours": {
+        "name": "Œufs sur 7 jours"
+      },
+      "oeufs_ce_mois": {
+        "name": "Œufs ce mois"
+      },
+      "oeufs_cette_annee": {
+        "name": "Œufs cette année"
+      },
+      "oeufs_total": {
+        "name": "Œufs au total"
+      },
+      "oeufs_dans_les_pondoirs": {
+        "name": "Œufs dans les pondoirs"
+      },
+      "etat_du_comptage": {
+        "name": "État du comptage"
+      }
+    },
+    "button": {
+      "compter_maintenant": {
+        "name": "Compter maintenant"
+      },
+      "oeufs_ramasses": {
+        "name": "Œufs ramassés"
+      }
+    },
+    "switch": {
+      "comptage_automatique": {
+        "name": "Comptage automatique"
+      }
+    },
+    "number": {
+      "intervalle_de_comptage": {
+        "name": "Intervalle de comptage"
+      },
+      "delai_de_confirmation": {
+        "name": "Délai de confirmation"
+      }
+    },
+    "time": {
+      "heure_de_debut": {
+        "name": "Heure de début"
+      },
+      "heure_de_fin": {
+        "name": "Heure de fin"
+      }
+    },
+    "image": {
+      "dernier_oeuf_detecte": {
+        "name": "Dernier œuf détecté"
+      }
+    }
+  },
+  "services": {
+    "compter_maintenant": {
+      "name": "Compter maintenant",
+      "description": "Lance une lecture caméra + IA tout de suite.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Poulailler",
+          "description": "Vide = tous les poulaillers."
+        }
+      }
+    },
+    "corriger": {
+      "name": "Corriger un jour",
+      "description": "Remplace le nombre d'œufs pondus un jour donné (aujourd'hui compris).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Poulailler",
+          "description": "Vide = tous les poulaillers."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Jour à corriger."
+        },
+        "nombre": {
+          "name": "Nombre d'œufs",
+          "description": "Nombre réel d'œufs pondus ce jour-là."
+        }
+      }
+    },
+    "oeufs_ramasses": {
+      "name": "Œufs ramassés",
+      "description": "Indique que les œufs ont été ramassés, pour ne pas manquer les suivants.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Poulailler",
+          "description": "Vide = tous les poulaillers."
+        },
+        "restants": {
+          "name": "Œufs laissés",
+          "description": "Œufs laissés dans les pondoirs (œuf factice par exemple)."
+        }
+      }
+    },
+    "importer_historique": {
+      "name": "Importer un historique",
+      "description": "Importe un historique au format jj/mm/aa:n;… depuis un input_text (n'écrase pas les jours déjà connus).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Poulailler",
+          "description": "Vide = tous les poulaillers."
+        },
+        "entity_id": {
+          "name": "Entité",
+          "description": "input_text contenant l'historique."
+        }
+      }
+    }
+  }
+}

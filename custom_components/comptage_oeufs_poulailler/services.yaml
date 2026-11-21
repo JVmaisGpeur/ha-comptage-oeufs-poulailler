@@ -1,0 +1,53 @@
+compter_maintenant:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: comptage_oeufs_poulailler
+
+corriger:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: comptage_oeufs_poulailler
+    date:
+      required: true
+      example: "2026-11-20"
+      selector:
+        date:
+    nombre:
+      required: true
+      example: 3
+      selector:
+        number:
+          min: 0
+          max: 999
+          mode: box
+
+oeufs_ramasses:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: comptage_oeufs_poulailler
+    restants:
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 999
+          mode: box
+
+importer_historique:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: comptage_oeufs_poulailler
+    entity_id:
+      required: true
+      example: input_text.poulailler_historique_oeufs
+      selector:
+        entity:
+          domain: input_text
